@@ -7,8 +7,8 @@ export default defineConfig({
   hash: false,
   clean: true,
   outExtensions: (ctx) => ({
-    js: ctx.format === 'esm' ? '.mjs' : '.cjs',
-    dts: ctx.format === 'esm' ? '.d.mts' : '.d.cts'
+    js: ctx.format === "es" ? ".mjs" : ".cjs",
+    dts: ctx.format === "es" ? ".d.mts" : ".d.cts",
   }),
   deps: {
     alwaysBundle: ["@clack/prompts", "better-result", "zod"],

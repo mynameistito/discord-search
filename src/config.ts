@@ -16,7 +16,7 @@ export type Config = {
   token: string;
 };
 
-type SettingsJson = {
+export type SettingsJson = {
   token?: string;
   guildId?: string;
   clientId?: string;
@@ -50,27 +50,7 @@ const readSettingsFile = async (): Promise<SettingsJson> => {
 };
 
 export const loadConfig = async (): Promise<Result<Config, ConfigError>> => {
-  let settings: SettingsJson = {};
-  try {
-    settings = await readSettingsFile();
-  } catch (err) {
-    // Only swallow ENOENT (file missing)
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      err.code === "ENOENT"
-    ) {
-      // File missing is OK - fall through to env vars
-    } else {
-      // Other errors (permission, disk, etc.) are real failures
-      return new Err(
-        new ConfigError({
-          message: `Failed to read settings: ${err instanceof Error ? err.message : String(err)}`,
-        })
-      );
-    }
-  }
+  const settings = await readSettingsFile();
 
   const token = process.env.DISCORD_BOT_TOKEN ?? settings.token;
 
@@ -107,23 +87,7 @@ export const saveSettings = async (
 
     await ensureAppDir();
 
-    let existing: SettingsJson = {};
-    try {
-      existing = await readSettingsFile();
-    } catch (err) {
-      // Only swallow ENOENT (file missing)
-      if (
-        err &&
-        typeof err === "object" &&
-        "code" in err &&
-        err.code === "ENOENT"
-      ) {
-        // File missing is OK - fall through with existing = {}
-      } else {
-        // Other errors (permission, disk, etc.) are real failures
-        throw err;
-      }
-    }
+    const existing = await readSettingsFile();
 
     const merged = { ...existing, ...validationResult.data };
 
@@ -161,7 +125,15 @@ export const saveSettings = async (
   }
 };
 
-const BOT_PERMISSIONS = 66_560; // VIEW_CHANNEL (1024) + READ_MESSAGE_HISTORY (65536)
+const BOT_PERMISSION_FLAGS = {
+  VIEW_CHANNEL: 1024,
+  READ_MESSAGE_HISTORY: 65_536,
+} as const;
+
+const BOT_PERMISSIONS = Object.values(BOT_PERMISSION_FLAGS).reduce(
+  (a, b) => a + b,
+  0
+);
 
 export const generateInviteLink = (clientId: string): string =>
-  `https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot&permissions=${BOT_PERMISSIONS}`;
+  `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&scope=bot&permissions=${BOT_PERMISSIONS}`;

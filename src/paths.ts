@@ -6,44 +6,28 @@ export const APP_DIR = join(homedir(), ".discord-search");
 export const SETTINGS_FILE = join(APP_DIR, "settings.json");
 export const OUTPUT_DIR = join(APP_DIR, "output");
 
+const chmodSafe = async (path: string, mode: number): Promise<void> => {
+  try {
+    await chmod(path, mode);
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code !== "ENOTSUP" &&
+      err.code !== "EINVAL"
+    ) {
+      throw err;
+    }
+  }
+};
+
 export const ensureAppDir = async (): Promise<void> => {
-  // Create APP_DIR with owner-only permissions
   await mkdir(APP_DIR, { recursive: true, mode: 0o700 });
+  await chmodSafe(APP_DIR, 0o700);
 
-  // Ensure permissions are correct (in case directory existed)
-  try {
-    await chmod(APP_DIR, 0o700);
-  } catch (err) {
-    // Only ignore known unsupported cases (e.g., Windows)
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      err.code !== "ENOTSUP" &&
-      err.code !== "EINVAL"
-    ) {
-      throw err;
-    }
-  }
-
-  // Create OUTPUT_DIR with owner-only permissions
   await mkdir(OUTPUT_DIR, { recursive: true, mode: 0o700 });
-
-  // Ensure OUTPUT_DIR permissions are correct
-  try {
-    await chmod(OUTPUT_DIR, 0o700);
-  } catch (err) {
-    // Only ignore known unsupported cases (e.g., Windows)
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      err.code !== "ENOTSUP" &&
-      err.code !== "EINVAL"
-    ) {
-      throw err;
-    }
-  }
+  await chmodSafe(OUTPUT_DIR, 0o700);
 
   const gitignorePath = join(APP_DIR, ".gitignore");
   const file = Bun.file(gitignorePath);

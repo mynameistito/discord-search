@@ -24,35 +24,65 @@ type RateLimitState = {
   resetAfterMs: number;
 };
 
-const rateLimitState: RateLimitState = {
-  remaining: 1,
-  resetAfterMs: 0,
-  lastRequestTime: 0,
+type BucketKey = string;
+
+const rateLimitBuckets = new Map<BucketKey, RateLimitState>();
+
+const getBucketKey = (path: string, token: string): BucketKey => {
+  const hashInput = `${path}:${token}`;
+  let hash = 0;
+  for (let i = 0; i < hashInput.length; i++) {
+    const char = hashInput.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash &= hash;
+  }
+  return `bucket:${hash}`;
+};
+
+const getBucketState = (bucketKey: BucketKey): RateLimitState => {
+  let state = rateLimitBuckets.get(bucketKey);
+  if (!state) {
+    state = {
+      lastRequestTime: 0,
+      remaining: 1,
+      resetAfterMs: 0,
+    };
+    rateLimitBuckets.set(bucketKey, state);
+  }
+  return state;
 };
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-const updateRateLimitState = (headers: Headers): void => {
+const updateRateLimitState = (headers: Headers, bucketKey: BucketKey): void => {
+  const state = getBucketState(bucketKey);
   const remaining = headers.get("X-RateLimit-Remaining");
   const resetAfter = headers.get("X-RateLimit-Reset-After");
+  const bucket = headers.get("X-RateLimit-Bucket");
+
+  if (bucket !== null && bucket !== bucketKey) {
+    rateLimitBuckets.delete(bucketKey);
+    rateLimitBuckets.set(bucket, state);
+  }
 
   if (remaining !== null) {
-    rateLimitState.remaining = Number.parseInt(remaining, 10);
+    state.remaining = Number.parseInt(remaining, 10);
   }
   if (resetAfter !== null) {
-    rateLimitState.resetAfterMs = Number.parseFloat(resetAfter) * 1000;
+    state.resetAfterMs = Number.parseFloat(resetAfter) * 1000;
   }
-  rateLimitState.lastRequestTime = Date.now();
+  state.lastRequestTime = Date.now();
 };
 
-const waitForRateLimit = async (): Promise<void> => {
-  if (rateLimitState.remaining > 0) {
+const waitForRateLimit = async (bucketKey: BucketKey): Promise<void> => {
+  const state = getBucketState(bucketKey);
+  if (state.remaining > 0) {
     return;
   }
 
-  const elapsed = Date.now() - rateLimitState.lastRequestTime;
-  const waitTime = rateLimitState.resetAfterMs - elapsed;
+  const elapsed = Date.now() - state.lastRequestTime;
+  const waitTime = state.resetAfterMs - elapsed;
 
   if (waitTime > 0) {
     await sleep(waitTime);
@@ -170,14 +200,15 @@ const handle202 = async <T>(
   token: string,
   schema: z.ZodType<T>,
   maxRetries: number,
-  maxRetries429: number
+  maxRetries429: number,
+  bucketKey: BucketKey
 ): Promise<Result<T, DiscordFetchError>> => {
   let retryAfter = await parseRetryAfterFrom202(response);
   let rateLimitAttempt = 0;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     await sleep(retryAfter * 1000);
-    await waitForRateLimit();
+    await waitForRateLimit(bucketKey);
 
     const retryResult = await fetchWithAuth(url, token);
     if (retryResult.isErr()) {
@@ -185,7 +216,7 @@ const handle202 = async <T>(
     }
 
     const retryResponse = retryResult.value;
-    updateRateLimitState(retryResponse.headers);
+    updateRateLimitState(retryResponse.headers, bucketKey);
 
     if (retryResponse.status === 429) {
       const rateLimitResult = await handle429(
@@ -278,9 +309,10 @@ export const discordFetch = async <T>(
   maxRetries202 = DEFAULT_MAX_RETRIES_202
 ): Promise<Result<T, DiscordFetchError>> => {
   const url = `${DISCORD_API_BASE}${path}`;
+  const bucketKey = getBucketKey(path, token);
 
   for (let attempt = 0; attempt <= maxRetries429; attempt++) {
-    await waitForRateLimit();
+    await waitForRateLimit(bucketKey);
 
     const fetchResult = await fetchWithAuth(url, token);
     if (fetchResult.isErr()) {
@@ -288,7 +320,7 @@ export const discordFetch = async <T>(
     }
 
     const response = fetchResult.value;
-    updateRateLimitState(response.headers);
+    updateRateLimitState(response.headers, bucketKey);
 
     if (response.status === 429) {
       const result = await handle429(response, attempt, maxRetries429);
@@ -305,7 +337,8 @@ export const discordFetch = async <T>(
         token,
         schema,
         maxRetries202,
-        maxRetries429
+        maxRetries429,
+        bucketKey
       );
     }
 

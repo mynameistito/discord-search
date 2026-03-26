@@ -3,6 +3,24 @@ import { z } from "zod";
 export const MAX_OFFSET = 9975;
 export const MAX_PAGE_SIZE = 25;
 
+const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+
+const snowflakeSchema = z
+  .string()
+  .regex(SNOWFLAKE_REGEX, {
+    message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+  })
+  .max(20, { message: "Discord ID exceeds maximum length of 20 characters" });
+
+const snowflakeArraySchema = z.array(
+  z
+    .string()
+    .regex(SNOWFLAKE_REGEX, {
+      message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+    })
+    .max(20, { message: "Discord ID exceeds maximum length of 20 characters" })
+);
+
 // Embed sub-objects
 
 export const EmbedFooterSchema = z.object({
@@ -67,7 +85,7 @@ export const EmbedSchema = z.object({
 });
 
 export const UserSchema = z.object({
-  id: z.string(),
+  id: snowflakeSchema,
   username: z.string(),
   discriminator: z.string().optional(),
   avatar: z.string().nullable().optional(),
@@ -75,7 +93,7 @@ export const UserSchema = z.object({
 });
 
 export const AttachmentSchema = z.object({
-  id: z.string(),
+  id: snowflakeSchema,
   filename: z.string(),
   size: z.number(),
   url: z.string(),
@@ -84,8 +102,8 @@ export const AttachmentSchema = z.object({
 });
 
 export const MessageSchema = z.object({
-  id: z.string(),
-  channel_id: z.string(),
+  id: snowflakeSchema,
+  channel_id: snowflakeSchema,
   author: UserSchema,
   content: z.string(),
   timestamp: z.string(),
@@ -99,8 +117,8 @@ export const MessageSchema = z.object({
   attachments: z.array(AttachmentSchema).optional(),
   referenced_message: z
     .object({
-      id: z.string(),
-      channel_id: z.string(),
+      id: snowflakeSchema,
+      channel_id: snowflakeSchema,
       author: UserSchema.optional(),
       content: z.string().optional(),
     })
@@ -109,11 +127,11 @@ export const MessageSchema = z.object({
 });
 
 export const ThreadSchema = z.object({
-  id: z.string(),
+  id: snowflakeSchema,
   type: z.number(),
   name: z.string().optional(),
-  guild_id: z.string().optional(),
-  parent_id: z.string().nullable().optional(),
+  guild_id: snowflakeSchema.optional(),
+  parent_id: snowflakeSchema.nullable().optional(),
   message_count: z.number().optional(),
   member_count: z.number().optional(),
   thread_metadata: z
@@ -127,10 +145,10 @@ export const ThreadSchema = z.object({
 });
 
 export const MemberSchema = z.object({
-  user_id: z.string().optional(),
+  user_id: snowflakeSchema.optional(),
   nick: z.string().nullable().optional(),
   avatar: z.string().nullable().optional(),
-  roles: z.array(z.string()).optional(),
+  roles: z.array(snowflakeSchema).optional(),
   joined_at: z.string().optional(),
   deaf: z.boolean().optional(),
   mute: z.boolean().optional(),
@@ -155,15 +173,15 @@ export const IndexNotReadyResponseSchema = z.object({
 export const SearchParamsSchema = z.object({
   attachmentExtension: z.array(z.string()).optional(),
   attachmentFilename: z.array(z.string()).optional(),
-  authorId: z.array(z.string()).optional(),
+  authorId: snowflakeArraySchema.optional(),
   authorType: z.array(z.enum(["user", "bot", "webhook"])).optional(),
-  channelId: z.array(z.string()).optional(),
+  channelId: snowflakeArraySchema.optional(),
   content: z.string().optional(),
   embedProvider: z.array(z.string()).optional(),
   embedType: z
     .array(z.enum(["image", "video", "gif", "sound", "article"]))
     .optional(),
-  guildId: z.string(),
+  guildId: snowflakeSchema,
   has: z
     .array(
       z.enum([
@@ -181,14 +199,14 @@ export const SearchParamsSchema = z.object({
     .optional(),
   includeNsfw: z.boolean().optional(),
   linkHostname: z.array(z.string()).optional(),
-  maxId: z.string().optional(),
+  maxId: snowflakeSchema.optional(),
   mentionEveryone: z.boolean().optional(),
-  mentions: z.array(z.string()).optional(),
-  mentionsRoleId: z.array(z.string()).optional(),
-  minId: z.string().optional(),
+  mentions: snowflakeArraySchema.optional(),
+  mentionsRoleId: snowflakeArraySchema.optional(),
+  minId: snowflakeSchema.optional(),
   pinned: z.boolean().optional(),
-  repliedToMessageId: z.array(z.string()).optional(),
-  repliedToUserId: z.array(z.string()).optional(),
+  repliedToMessageId: snowflakeArraySchema.optional(),
+  repliedToUserId: snowflakeArraySchema.optional(),
   slop: z.number().int().min(0).optional(),
   sortBy: z.enum(["timestamp", "relevance"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),

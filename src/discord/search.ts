@@ -1,9 +1,10 @@
-import { Ok, type Result } from "better-result";
+import { Ok, Result } from "better-result";
 import { discordFetch } from "@/discord/client.ts";
 import {
   MAX_OFFSET,
   type Message,
   type SearchParams,
+  SearchParamsSchema,
   type SearchResponse,
   SearchResponseSchema,
 } from "@/discord/schemas.ts";
@@ -11,10 +12,25 @@ import type {
   DiscordApiError,
   IndexNotReadyError,
   RateLimitExhaustedError,
-  ValidationError,
 } from "@/errors.ts";
+import { ValidationError } from "@/errors.ts";
 
 const DEFAULT_PAGE_SIZE = 25;
+
+const validateSearchParams = (
+  params: unknown
+): Result<SearchParams, ValidationError> => {
+  const parsed = SearchParamsSchema.safeParse(params);
+  if (!parsed.success) {
+    return Result.err(
+      new ValidationError({
+        message: "Invalid search parameters",
+        issues: parsed.error.issues,
+      })
+    );
+  }
+  return Result.ok(parsed.data);
+};
 
 type SearchError =
   | DiscordApiError
@@ -95,13 +111,20 @@ const buildQueryString = (
 };
 
 export const searchMessages = async (
-  params: SearchParams,
+  params: unknown,
   token: string,
   offset = 0,
   maxId?: string
 ): Promise<Result<SearchResponse, SearchError>> => {
-  const queryString = buildQueryString(params, offset, maxId);
-  const path = `/guilds/${params.guildId}/messages/search?${queryString}`;
+  const validatedParams = validateSearchParams(params);
+  if (validatedParams.isErr()) {
+    return validatedParams;
+  }
+
+  const queryParams = validatedParams.value;
+  const queryString = buildQueryString(queryParams, offset, maxId);
+  const encodedGuildId = encodeURIComponent(queryParams.guildId);
+  const path = `/guilds/${encodedGuildId}/messages/search?${queryString}`;
 
   return await discordFetch(path, SearchResponseSchema, token);
 };
@@ -229,18 +252,24 @@ const fetchPartition = async (
 };
 
 export const searchAllMessages = async (
-  params: SearchParams,
+  params: unknown,
   token: string,
   onProgress?: ProgressCallback,
   onPage?: PageCallback
 ): Promise<Result<Message[], SearchError>> => {
+  const validatedParams = validateSearchParams(params);
+  if (validatedParams.isErr()) {
+    return validatedParams;
+  }
+
+  const queryParams = validatedParams.value;
   const config: PaginationConfig = {
-    searchParams: { ...params, sortBy: "timestamp", sortOrder: "desc" },
+    searchParams: { ...queryParams, sortBy: "timestamp", sortOrder: "desc" },
     token,
-    startOffset: params.offset ?? 0,
-    maxMessages: params.limit,
-    pageSize: params.limit
-      ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
+    startOffset: queryParams.offset ?? 0,
+    maxMessages: queryParams.limit,
+    pageSize: queryParams.limit
+      ? Math.min(queryParams.limit, DEFAULT_PAGE_SIZE)
       : DEFAULT_PAGE_SIZE,
     onProgress,
     onPage,

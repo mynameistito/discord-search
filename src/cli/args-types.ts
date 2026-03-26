@@ -76,7 +76,7 @@ export const SettingsInviteArgsSchema = GlobalFlagsSchema.extend({
   clientId: z.string().optional(),
 });
 
-export const ParsedArgsSchema = z.discriminatedUnion("command", [
+export const ParsedArgsSchema = z.union([
   InteractiveArgsSchema,
   SearchArgsSchema,
   PresetListArgsSchema,

@@ -1,5 +1,6 @@
 import { Err, Ok, type Result } from "better-result";
 import { ConfigError, ExportError } from "@/errors.ts";
+import { fileExists, readTextFile, writeTextFile } from "@/fs.ts";
 import { ensureAppDir, SETTINGS_FILE } from "@/paths.ts";
 
 export type Config = {
@@ -15,11 +16,10 @@ type SettingsJson = {
 };
 
 const readSettingsFile = async (): Promise<SettingsJson> => {
-  const file = Bun.file(SETTINGS_FILE);
-  if (!(await file.exists())) {
+  if (!(await fileExists(SETTINGS_FILE))) {
     return {};
   }
-  const text = await file.text();
+  const text = await readTextFile(SETTINGS_FILE);
   return JSON.parse(text) as SettingsJson;
 };
 
@@ -64,7 +64,7 @@ export const saveSettings = async (
 
     const merged = { ...existing, ...values };
 
-    await Bun.write(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`);
+    await writeTextFile(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`);
     return new Ok(undefined);
   } catch (cause) {
     return new Err(

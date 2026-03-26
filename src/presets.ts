@@ -1,6 +1,7 @@
 import { Result } from "better-result";
 import type { SearchParams } from "@/discord/schemas.ts";
 import { ExportError } from "@/errors.ts";
+import { fileExists, readTextFile, writeTextFile } from "@/fs.ts";
 
 const PRESETS_FILE = ".discord-search-presets.json";
 
@@ -12,12 +13,11 @@ export type Preset = {
 export const loadPresets = async (): Promise<Result<Preset[], ExportError>> => {
   return await Result.tryPromise({
     try: async () => {
-      const file = Bun.file(PRESETS_FILE);
-      const exists = await file.exists();
+      const exists = await fileExists(PRESETS_FILE);
       if (!exists) {
         return [];
       }
-      const text = await file.text();
+      const text = await readTextFile(PRESETS_FILE);
       return JSON.parse(text) as Preset[];
     },
     catch: (cause) =>
@@ -45,7 +45,7 @@ export const savePreset = async (
         presets.push({ name, params });
       }
 
-      await Bun.write(PRESETS_FILE, JSON.stringify(presets, null, 2));
+      await writeTextFile(PRESETS_FILE, JSON.stringify(presets, null, 2));
     },
     catch: (cause) =>
       new ExportError({
@@ -63,7 +63,7 @@ export const deletePreset = async (
       const presetsResult = await loadPresets();
       const presets = presetsResult.isOk() ? presetsResult.value : [];
       const filtered = presets.filter((p) => p.name !== name);
-      await Bun.write(PRESETS_FILE, JSON.stringify(filtered, null, 2));
+      await writeTextFile(PRESETS_FILE, JSON.stringify(filtered, null, 2));
     },
     catch: (cause) =>
       new ExportError({

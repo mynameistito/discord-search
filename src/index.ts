@@ -270,10 +270,10 @@ const main = async (): Promise<void> => {
   }
 
   if (cliArgs.version) {
-    const pkg = await Bun.file(
-      new URL("../package.json", import.meta.url)
-    ).json();
-    console.log(`discord-search ${pkg.version as string}`);
+    const { createRequire } = await import("node:module");
+    const require = createRequire(import.meta.url);
+    const pkg = require("../package.json") as { version: string };
+    console.log(`discord-search ${pkg.version}`);
     process.exit(0);
   }
 

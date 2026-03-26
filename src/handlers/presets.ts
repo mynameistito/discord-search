@@ -17,6 +17,7 @@ import {
   exportJson,
   exportMessagesCsv,
 } from "@/export.ts";
+import { writeTextFile } from "@/fs.ts";
 import { exportNonInteractive } from "@/handlers/export.ts";
 import {
   displaySummary,
@@ -156,7 +157,7 @@ const runPresetSearch = async (
   }
 
   const dir = `./output/${name}-${timestamp}`;
-  await Bun.write(`${dir}/.gitkeep`, "");
+  await writeTextFile(`${dir}/.gitkeep`, "");
 
   const exports: Promise<unknown>[] = [];
   if (format === "json" || format === "all") {

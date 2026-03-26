@@ -12,14 +12,7 @@ const snowflakeSchema = z
   })
   .max(20, { message: "Discord ID exceeds maximum length of 20 characters" });
 
-const snowflakeArraySchema = z.array(
-  z
-    .string()
-    .regex(SNOWFLAKE_REGEX, {
-      message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
-    })
-    .max(20, { message: "Discord ID exceeds maximum length of 20 characters" })
-);
+const snowflakeArraySchema = z.array(snowflakeSchema);
 
 // Embed sub-objects
 
@@ -29,19 +22,15 @@ export const EmbedFooterSchema = z.object({
   proxy_icon_url: z.string().optional(),
 });
 
-export const EmbedImageSchema = z.object({
+const EmbedMediaSchema = z.object({
   url: z.string(),
   proxy_url: z.string().optional(),
   height: z.number().optional(),
   width: z.number().optional(),
 });
 
-export const EmbedThumbnailSchema = z.object({
-  url: z.string(),
-  proxy_url: z.string().optional(),
-  height: z.number().optional(),
-  width: z.number().optional(),
-});
+export const EmbedImageSchema = EmbedMediaSchema;
+export const EmbedThumbnailSchema = EmbedMediaSchema;
 
 export const EmbedVideoSchema = z.object({
   url: z.string().optional(),
@@ -104,6 +93,7 @@ export const AttachmentSchema = z.object({
 export const MessageSchema = z.object({
   id: snowflakeSchema,
   channel_id: snowflakeSchema,
+  guild_id: snowflakeSchema.optional(),
   author: UserSchema,
   content: z.string(),
   timestamp: z.string(),
@@ -161,6 +151,10 @@ export const SearchResponseSchema = z.object({
   documents_indexed: z.number().optional(),
   threads: z.array(ThreadSchema).optional(),
   members: z.array(MemberSchema).optional(),
+});
+
+export const RateLimitBodySchema = z.object({
+  retry_after: z.number(),
 });
 
 export const IndexNotReadyResponseSchema = z.object({

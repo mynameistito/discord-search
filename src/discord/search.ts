@@ -2,6 +2,7 @@ import { Ok, Result } from "better-result";
 import { discordFetch } from "@/discord/client.ts";
 import {
   MAX_OFFSET,
+  MAX_PAGE_SIZE,
   type Message,
   type SearchParams,
   SearchParamsSchema,
@@ -14,8 +15,6 @@ import type {
   RateLimitExhaustedError,
 } from "@/errors.ts";
 import { ValidationError } from "@/errors.ts";
-
-const DEFAULT_PAGE_SIZE = 25;
 
 const validateSearchParams = (
   params: unknown
@@ -45,8 +44,8 @@ const buildQueryString = (
 ): string => {
   const qs = new URLSearchParams();
   const pageSize = params.limit
-    ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
-    : DEFAULT_PAGE_SIZE;
+    ? Math.min(params.limit, MAX_PAGE_SIZE)
+    : MAX_PAGE_SIZE;
 
   qs.set("limit", String(pageSize));
   qs.set("offset", String(offset));
@@ -110,6 +109,19 @@ const buildQueryString = (
   return qs.toString();
 };
 
+const fetchSearch = async (
+  params: SearchParams,
+  token: string,
+  offset: number,
+  maxId?: string
+): Promise<Result<SearchResponse, SearchError>> => {
+  const queryString = buildQueryString(params, offset, maxId);
+  const encodedGuildId = encodeURIComponent(params.guildId);
+  const path = `/guilds/${encodedGuildId}/messages/search?${queryString}`;
+
+  return await discordFetch(path, SearchResponseSchema, token);
+};
+
 export const searchMessages = async (
   params: unknown,
   token: string,
@@ -121,12 +133,7 @@ export const searchMessages = async (
     return validatedParams;
   }
 
-  const queryParams = validatedParams.value;
-  const queryString = buildQueryString(queryParams, offset, maxId);
-  const encodedGuildId = encodeURIComponent(queryParams.guildId);
-  const path = `/guilds/${encodedGuildId}/messages/search?${queryString}`;
-
-  return await discordFetch(path, SearchResponseSchema, token);
+  return await fetchSearch(validatedParams.value, token, offset, maxId);
 };
 
 export type SearchProgress = { fetched: number; total: number };
@@ -148,15 +155,15 @@ const fetchPage = async (
   onProgress?: ProgressCallback,
   onPage?: PageCallback
 ): Promise<Result<"done" | "continue" | "break", SearchError>> => {
-  const result = await searchMessages(params, token, offset, maxId);
+  const result = await fetchSearch(params, token, offset, maxId);
   if (result.isErr()) {
     return result;
   }
 
   const data = result.value;
   const pageSize = params.limit
-    ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
-    : DEFAULT_PAGE_SIZE;
+    ? Math.min(params.limit, MAX_PAGE_SIZE)
+    : MAX_PAGE_SIZE;
 
   if (state.totalResults === 0) {
     state.totalResults = maxMessages
@@ -255,7 +262,8 @@ export const searchAllMessages = async (
   params: unknown,
   token: string,
   onProgress?: ProgressCallback,
-  onPage?: PageCallback
+  onPage?: PageCallback,
+  maxMessages?: number
 ): Promise<Result<Message[], SearchError>> => {
   const validatedParams = validateSearchParams(params);
   if (validatedParams.isErr()) {
@@ -263,14 +271,35 @@ export const searchAllMessages = async (
   }
 
   const queryParams = validatedParams.value;
+
+  if (queryParams.sortBy && queryParams.sortBy !== "timestamp") {
+    return Result.err(
+      new ValidationError({
+        message:
+          "searchAllMessages requires sortBy: 'timestamp' for snowflake-based pagination",
+        issues: [],
+      })
+    );
+  }
+
+  if (queryParams.sortOrder && queryParams.sortOrder !== "desc") {
+    return Result.err(
+      new ValidationError({
+        message:
+          "searchAllMessages requires sortOrder: 'desc' for snowflake-based pagination",
+        issues: [],
+      })
+    );
+  }
+
   const config: PaginationConfig = {
     searchParams: { ...queryParams, sortBy: "timestamp", sortOrder: "desc" },
     token,
     startOffset: queryParams.offset ?? 0,
-    maxMessages: undefined,
+    maxMessages,
     pageSize: queryParams.limit
-      ? Math.min(queryParams.limit, DEFAULT_PAGE_SIZE)
-      : DEFAULT_PAGE_SIZE,
+      ? Math.min(queryParams.limit, MAX_PAGE_SIZE)
+      : MAX_PAGE_SIZE,
     onProgress,
     onPage,
   };

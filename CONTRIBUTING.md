@@ -76,7 +76,7 @@ See `.env.example` for the expected shape.
 
 - **ESM only** — all files use `import`/`export`; no `require()`.
 - **Result types** — use `better-result` tagged errors instead of thrown exceptions. Add new error tags to `src/errors.ts`.
-- **No external runtime deps** unless strictly necessary. The runtime dependencies are `@clack/prompts`, `better-result`, and `zod`.
+- **No external runtime deps** unless strictly necessary. The runtime dependencies are `@clack/prompts`, `better-result`, `@typescript/native-preview`, and `zod`.
 - **Formatting/linting** is enforced by Biome via Ultracite. Run `bun run fix` to auto-fix before committing.
 
 ## Testing

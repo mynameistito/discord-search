@@ -30,7 +30,7 @@ Security issues relevant to this project include:
 - **Dependency confusion / supply chain** — a dependency being resolved to a malicious package with the same name.
 - **Credential exposure** — GitHub tokens or other secrets being leaked through logs, error output, or process arguments.
 
-Issues in third-party dependencies should be reported directly to the upstream maintainer. If the vulnerability is only exploitable through `repo-updater`, please report it here as well.
+Issues in third-party dependencies should be reported directly to the upstream maintainer. If the vulnerability is only exploitable through `discord-search`, please report it here as well.
 
 ## Out of Scope
 

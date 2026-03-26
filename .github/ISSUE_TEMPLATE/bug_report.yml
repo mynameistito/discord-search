@@ -83,7 +83,17 @@ body:
     id: config
     attributes:
       label: Environment file (if applicable)
-      description: Paste your `.env` file with token and IDs redacted, or your `.discord-search-presets.json` if relevant.
+      description: |
+        ⚠️ **Never paste secrets**
+
+        Only provide variable names with masked examples (e.g., `DISCORD_TOKEN=REDACTED`).
+
+        Example:
+        ```env
+        DISCORD_BOT_TOKEN=REDACTED
+        DISCORD_CLIENT_ID=123456789012345678
+        DISCORD_GUILD_ID=987654321098765432
+        ```
       render: shell
 
   - type: textarea

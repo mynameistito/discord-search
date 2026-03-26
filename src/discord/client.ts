@@ -201,7 +201,7 @@ const parseResponse = async <T>(
     return Result.err(
       new ValidationError({
         message: "Discord API response validation failed",
-        issues: parsed.error,
+        issues: parsed.error.issues,
       })
     );
   }

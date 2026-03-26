@@ -41,5 +41,8 @@ opensrc/
 # Presets
 .discord-search-presets.json
 
+# Local config
+*.local.json
+
 # Traycer
 .traycer/

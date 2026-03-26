@@ -1,4 +1,5 @@
 import { TaggedError } from "better-result";
+import type { ZodIssue } from "zod";
 
 export class ConfigError extends TaggedError("ConfigError")<{
   message: string;
@@ -24,7 +25,7 @@ export class IndexNotReadyError extends TaggedError("IndexNotReadyError")<{
 
 export class ValidationError extends TaggedError("ValidationError")<{
   message: string;
-  issues: unknown;
+  issues: ZodIssue[];
 }>() {}
 
 export class ExportError extends TaggedError("ExportError")<{

@@ -158,7 +158,7 @@ const fetchPage = async (
     ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
     : DEFAULT_PAGE_SIZE;
 
-  if (offset === 0 && !maxId) {
+  if (state.totalResults === 0) {
     state.totalResults = maxMessages
       ? Math.min(data.total_results, maxMessages)
       : data.total_results;
@@ -267,7 +267,7 @@ export const searchAllMessages = async (
     searchParams: { ...queryParams, sortBy: "timestamp", sortOrder: "desc" },
     token,
     startOffset: queryParams.offset ?? 0,
-    maxMessages: queryParams.limit,
+    maxMessages: undefined,
     pageSize: queryParams.limit
       ? Math.min(queryParams.limit, DEFAULT_PAGE_SIZE)
       : DEFAULT_PAGE_SIZE,

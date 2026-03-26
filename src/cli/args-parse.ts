@@ -192,16 +192,22 @@ const parseOutputFlags = (
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     const next = args[i + 1];
-    if (arg === "--export" && next) {
+    if (arg === "--export") {
+      if (!isValue(next)) {
+        return exitWithError("Flag --export requires a value", "search");
+      }
       if (!VALID_EXPORT_FORMATS.has(next)) {
-        exitWithError(
+        return exitWithError(
           `Invalid export format: "${next}". Valid formats: ${[...VALID_EXPORT_FORMATS].join(", ")}`,
           "search"
         );
       }
       exportFormat = next;
       i++;
-    } else if (arg === "--output-dir" && next) {
+    } else if (arg === "--output-dir") {
+      if (!isValue(next)) {
+        return exitWithError("Flag --output-dir requires a value", "search");
+      }
       outputDir = next;
       i++;
     } else if (arg === "--json") {
@@ -254,6 +260,11 @@ const parseSearchFlags = (
 
     if (arg.startsWith("-")) {
       exitWithError(`Unknown flag: "${arg}"`, "search");
+    } else {
+      exitWithError(
+        `Unexpected positional argument: "${arg}". Did you mean --content "${arg}"?`,
+        "search"
+      );
     }
   }
 
@@ -351,6 +362,10 @@ const parsePresetRunAllAction = (
   }
 
   const flags = parseOutputFlags(restArgs);
+
+  if (!all && names.length === 0) {
+    exitWithError("You must pass --all or at least one preset name", "preset");
+  }
 
   return ParsedArgsSchema.parse({
     command: "preset",

@@ -1,0 +1,82 @@
+{
+  "name": "@mynameistito/discord-search",
+  "version": "1.0.0",
+  "description": "Search Discord server messages from your terminal. Filter by author, content type, mentions, and more.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "bin": {
+    "discord-search": "./dist/index.mjs"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  },
+  "packageManager": "bun@1.13.11",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "lefthook install",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run typecheck && bun run check && bun run build",
+    "version": "changeset version",
+    "release": "changeset publish"
+  },
+  "keywords": [
+    "discord",
+    "cli",
+    "search",
+    "terminal",
+    "discord-api",
+    "bun"
+  ],
+  "author": {
+    "name": "mynameistito",
+    "email": "github@mynameistito.com",
+    "url": "https://mynameistito.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mynameistito/discord-search.git"
+  },
+  "homepage": "https://github.com/mynameistito/discord-search#readme",
+  "bugs": {
+    "url": "https://github.com/mynameistito/discord-search/issues"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "better-result": "^2.7.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.9",
+    "@changesets/cli": "^2.30.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260325.1",
+    "@types/bun": "^1.3.11",
+    "lefthook": "^2.1.4",
+    "tsdown": "^0.21.5",
+    "typescript": "^6.0.2",
+    "ultracite": "7.3.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

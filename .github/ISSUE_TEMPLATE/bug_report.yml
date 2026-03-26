@@ -1,0 +1,103 @@
+name: Bug Report
+description: Report something that isn't working correctly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a bug report, please check that no existing issue already covers it.
+        For security vulnerabilities, use [private vulnerability reporting](../../security) instead of opening a public issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. What did you expect, and what actually happened?
+      placeholder: |
+        Expected: search results include messages from all channels.
+        Actual: results only show messages from the first channel and the spinner hangs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably reproduce the issue.
+      placeholder: |
+        1. Run `discord-search`
+        2. Select "Search messages"
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Full command and output
+      description: Paste the exact command you ran and complete terminal output, including any error messages. Please redact secrets/PII (tokens, auth headers, file paths, user IDs) before posting.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: discord-search version
+      description: Run `discord-search --version` or check `package.json`.
+      placeholder: "0.2.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options:
+        - Bun
+        - Node.js
+    validations:
+      required: true
+
+  - type: input
+    id: runtime_version
+    attributes:
+      label: Runtime version
+      description: Output of `bun --version` or `node --version`.
+      placeholder: "1.2.4 / 22.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Environment file (if applicable)
+      description: |
+        ⚠️ **Never paste secrets**
+
+        Only provide variable names with masked examples (e.g., `DISCORD_TOKEN=REDACTED`).
+
+        Example:
+        ```env
+        DISCORD_BOT_TOKEN=REDACTED
+        DISCORD_CLIENT_ID=YOUR_CLIENT_ID
+        DISCORD_GUILD_ID=YOUR_GUILD_ID
+        ```
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else that might be relevant — related issues, recent changes, unusual repo setup, etc.

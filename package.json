@@ -6,7 +6,7 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "bin": {
-    "discord-search": "./dist/index.mjs"
+    "discord-search": "dist/index.mjs"
   },
   "exports": {
     ".": {

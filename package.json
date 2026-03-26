@@ -35,7 +35,6 @@
     "fix": "ultracite fix",
     "prepare": "lefthook install",
     "typecheck": "tsc --noEmit",
-    "test:node": "echo 'coming soon' && exit 0",
     "prepublishOnly": "bun run typecheck && bun run check && bun run build",
     "version": "changeset version",
     "release": "changeset publish"

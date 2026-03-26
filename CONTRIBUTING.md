@@ -45,9 +45,9 @@ __tests__/            # Test directory
 scripts/
   cleanup.ts          # Pre-commit cleanup hook
 
-.github/workflows/
-  ci.yml              # Typecheck → lint → build → test (Bun latest/canary, Node 22/24)
-  release.yml         # Changesets-based npm publish
+ .github/workflows/
+   ci.yml              # Typecheck → lint → build → test (Bun latest/canary)
+   release.yml         # Changesets-based npm publish
 ```
 
 ## Development
@@ -76,7 +76,7 @@ See `.env.example` for the expected shape.
 
 - **ESM only** — all files use `import`/`export`; no `require()`.
 - **Result types** — use `better-result` tagged errors instead of thrown exceptions. Add new error tags to `src/errors.ts`.
-- **No external runtime deps** unless strictly necessary. The runtime dependencies are `@clack/prompts`, `better-result`, `@typescript/native-preview`, and `zod`.
+- **No external runtime deps** unless strictly necessary. The runtime dependencies are `@clack/prompts`, `better-result`, and `zod`.
 - **Formatting/linting** is enforced by Biome via Ultracite. Run `bun run fix` to auto-fix before committing.
 
 ## Testing
@@ -136,7 +136,6 @@ CI runs on every push and PR to `main`:
 1. **check** — typecheck + lint
 2. **build** — build verification + `npm pack --dry-run`
 3. **test-bun** — `bun test` on Bun latest and canary (canary failures are non-blocking)
-4. **test-node** — `bun run test:node` on Node 22 and 24
 
 All jobs must pass for a PR to be mergeable.
 

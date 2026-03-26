@@ -111,13 +111,16 @@ export const saveSettings = async (
     try {
       existing = await readSettingsFile();
     } catch (err) {
-      // Only swallow ENOENT
+      // Only swallow ENOENT (file missing)
       if (
         err &&
         typeof err === "object" &&
         "code" in err &&
-        err.code !== "ENOENT"
+        err.code === "ENOENT"
       ) {
+        // File missing is OK - fall through with existing = {}
+      } else {
+        // Other errors (permission, disk, etc.) are real failures
         throw err;
       }
     }

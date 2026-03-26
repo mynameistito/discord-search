@@ -32,11 +32,20 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Debug npm config
+        run: |
+          echo "=== npm config ==="
+          npm config list
+          echo "=== npm whoami ==="
+          npm whoami --registry https://registry.npmjs.org/
+          echo "=== Checking npm registry access ==="
+          npm info @mynameistito || echo "Scope does not exist"
+
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@e87c8ed249971350e47fab7515075f44eb134e5b # v1.7.0
         with:
-          publish: npm publish
+          publish: bun run release
           version: bun run version
           commit: "chore: release package"
           title: "chore: release package"

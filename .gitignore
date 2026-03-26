@@ -40,3 +40,6 @@ opensrc/
 
 # Presets
 .discord-search-presets.json
+
+# Traycer
+.traycer/

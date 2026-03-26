@@ -101,10 +101,12 @@ type DiscordFetchError =
   | IndexNotReadyError
   | ValidationError;
 
+const MAX_429_RETRIES = 5;
+
 const handle429 = async (
   response: Response,
-  attempt: number,
-  maxRetries: number
+  rateLimitAttempt: number,
+  max429Retries: number
 ): Promise<Result<"retry", DiscordApiError | RateLimitExhaustedError>> => {
   const bodyResult = await Result.tryPromise({
     try: () => response.json() as Promise<unknown>,
@@ -133,16 +135,17 @@ const handle429 = async (
 
   const retryAfter = parsed.data.retry_after;
 
-  if (attempt >= maxRetries) {
+  if (rateLimitAttempt >= max429Retries) {
     return Result.err(
       new RateLimitExhaustedError({
-        message: `Rate limited after ${maxRetries} retries`,
+        message: `Rate limited after ${max429Retries} retries`,
         retryAfter,
       })
     );
   }
 
-  const backoffMs = retryAfter * 1000 * 2 ** attempt + Math.random() * 1000;
+  const backoffMs =
+    retryAfter * 1000 * 2 ** rateLimitAttempt + Math.random() * 1000;
   await sleep(backoffMs);
   return Result.ok("retry" as const);
 };
@@ -171,6 +174,7 @@ const handle202 = async <T>(
   maxRetries: number
 ): Promise<Result<T, DiscordFetchError>> => {
   let retryAfter = await parseRetryAfterFrom202(response);
+  let rateLimitAttempt = 0;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     await sleep(retryAfter * 1000);
@@ -187,12 +191,14 @@ const handle202 = async <T>(
     if (retryResponse.status === 429) {
       const rateLimitResult = await handle429(
         retryResponse,
-        attempt,
-        maxRetries
+        rateLimitAttempt,
+        MAX_429_RETRIES
       );
       if (rateLimitResult.isErr()) {
         return rateLimitResult;
       }
+      rateLimitAttempt++;
+      attempt--;
       continue;
     }
 

@@ -96,6 +96,8 @@ const BOOLEAN_FLAGS: Record<string, keyof SearchParams> = {
   "--mention-everyone": "mentionEveryone",
 };
 
+const INTEGER_REGEX = /^\d+$/;
+
 type SearchFlagsResult = {
   params: Omit<SearchParams, "guildId"> & { guildId?: string };
   export?: string;
@@ -129,38 +131,35 @@ const applySearchParamFlag = (
   }
 
   if (arg === "--slop" && next) {
-    const slop = Number.parseInt(next, 10);
-    if (!Number.isFinite(slop)) {
+    if (!INTEGER_REGEX.test(next)) {
       return exitWithError(
         `Invalid value for --slop: expected integer, got "${next}"`,
         "search"
       );
     }
-    params.slop = slop;
+    params.slop = Number.parseInt(next, 10);
     return 2;
   }
 
   if (arg === "--offset" && next) {
-    const offset = Number.parseInt(next, 10);
-    if (!Number.isFinite(offset)) {
+    if (!INTEGER_REGEX.test(next)) {
       return exitWithError(
         `Invalid value for --offset: expected integer, got "${next}"`,
         "search"
       );
     }
-    params.offset = offset;
+    params.offset = Number.parseInt(next, 10);
     return 2;
   }
 
   if (arg === "--limit" && next) {
-    const limit = Number.parseInt(next, 10);
-    if (!Number.isFinite(limit)) {
+    if (!INTEGER_REGEX.test(next)) {
       return exitWithError(
         `Invalid value for --limit: expected integer, got "${next}"`,
         "search"
       );
     }
-    params.limit = limit;
+    params.limit = Number.parseInt(next, 10);
     return 2;
   }
 
@@ -236,13 +235,13 @@ const parseSearchCommand = (
   global: GlobalFlags & { guild?: string }
 ): SearchArgs => {
   const guildId = global.guild;
-  if (!guildId) {
+  const parsed = parseSearchFlags(remaining.slice(1), guildId);
+  if (!(global.help || guildId)) {
     return exitWithError(
       "Missing required --guild/-g (guildId) for search command",
       "search"
     );
   }
-  const parsed = parseSearchFlags(remaining.slice(1), guildId);
   return ParsedArgsSchema.parse({
     command: "search",
     help: global.help,

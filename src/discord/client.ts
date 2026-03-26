@@ -101,8 +101,6 @@ type DiscordFetchError =
   | IndexNotReadyError
   | ValidationError;
 
-const MAX_429_RETRIES = 5;
-
 const handle429 = async (
   response: Response,
   rateLimitAttempt: number,
@@ -171,7 +169,8 @@ const handle202 = async <T>(
   url: string,
   token: string,
   schema: z.ZodType<T>,
-  maxRetries: number
+  maxRetries: number,
+  maxRetries429: number
 ): Promise<Result<T, DiscordFetchError>> => {
   let retryAfter = await parseRetryAfterFrom202(response);
   let rateLimitAttempt = 0;
@@ -192,7 +191,7 @@ const handle202 = async <T>(
       const rateLimitResult = await handle429(
         retryResponse,
         rateLimitAttempt,
-        MAX_429_RETRIES
+        maxRetries429
       );
       if (rateLimitResult.isErr()) {
         return rateLimitResult;
@@ -300,7 +299,14 @@ export const discordFetch = async <T>(
     }
 
     if (response.status === 202) {
-      return await handle202(response, url, token, schema, maxRetries202);
+      return await handle202(
+        response,
+        url,
+        token,
+        schema,
+        maxRetries202,
+        maxRetries429
+      );
     }
 
     if (!response.ok) {

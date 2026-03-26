@@ -183,7 +183,8 @@ const VALID_EXPORT_FORMATS = new Set([
 
 // Parses common output flags (--export, --output-dir, --json) from args
 const parseOutputFlags = (
-  args: string[]
+  args: string[],
+  subcommand: "search" | "preset"
 ): { export?: string; outputDir?: string; json: boolean } => {
   let exportFormat: string | undefined;
   let outputDir: string | undefined;
@@ -194,19 +195,19 @@ const parseOutputFlags = (
     const next = args[i + 1];
     if (arg === "--export") {
       if (!isValue(next)) {
-        return exitWithError("Flag --export requires a value", "search");
+        return exitWithError("Flag --export requires a value", subcommand);
       }
       if (!VALID_EXPORT_FORMATS.has(next)) {
         return exitWithError(
           `Invalid export format: "${next}". Valid formats: ${[...VALID_EXPORT_FORMATS].join(", ")}`,
-          "search"
+          subcommand
         );
       }
       exportFormat = next;
       i++;
     } else if (arg === "--output-dir") {
       if (!isValue(next)) {
-        return exitWithError("Flag --output-dir requires a value", "search");
+        return exitWithError("Flag --output-dir requires a value", subcommand);
       }
       outputDir = next;
       i++;
@@ -223,7 +224,7 @@ const parseSearchFlags = (
   guildId?: string
 ): SearchFlagsResult => {
   const params: Record<string, unknown> = {};
-  const output = parseOutputFlags(args);
+  const output = parseOutputFlags(args, "search");
   let savePreset: string | undefined;
 
   if (guildId) {
@@ -326,7 +327,7 @@ const parsePresetRunAction = (
   if (!name) {
     return exitWithError("preset name is required for 'preset run'", "preset");
   }
-  const flags = parseOutputFlags(remaining.slice(3));
+  const flags = parseOutputFlags(remaining.slice(3), "preset");
   return ParsedArgsSchema.parse({
     command: "preset",
     action: "run",
@@ -361,7 +362,7 @@ const parsePresetRunAllAction = (
     }
   }
 
-  const flags = parseOutputFlags(restArgs);
+  const flags = parseOutputFlags(restArgs, "preset");
 
   if (!all && names.length === 0) {
     exitWithError("You must pass --all or at least one preset name", "preset");

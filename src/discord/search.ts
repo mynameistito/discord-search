@@ -1,6 +1,7 @@
 import { Ok, type Result } from "better-result";
 import { discordFetch } from "@/discord/client.ts";
 import {
+  MAX_OFFSET,
   type Message,
   type SearchParams,
   type SearchResponse,
@@ -12,6 +13,8 @@ import type {
   RateLimitExhaustedError,
   ValidationError,
 } from "@/errors.ts";
+
+const DEFAULT_PAGE_SIZE = 25;
 
 type SearchError =
   | DiscordApiError
@@ -25,7 +28,9 @@ const buildQueryString = (
   maxId?: string
 ): string => {
   const qs = new URLSearchParams();
-  const pageSize = params.limit ? Math.min(params.limit, 25) : 25;
+  const pageSize = params.limit
+    ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
+    : DEFAULT_PAGE_SIZE;
 
   qs.set("limit", String(pageSize));
   qs.set("offset", String(offset));
@@ -101,7 +106,8 @@ export const searchMessages = async (
   return await discordFetch(path, SearchResponseSchema, token);
 };
 
-export type ProgressCallback = (fetched: number, total: number) => void;
+export type SearchProgress = { fetched: number; total: number };
+export type ProgressCallback = (progress: SearchProgress) => void;
 export type PageCallback = (messages: Message[]) => void;
 
 type PaginationState = {
@@ -125,7 +131,9 @@ const fetchPage = async (
   }
 
   const data = result.value;
-  const pageSize = params.limit ? Math.min(params.limit, 25) : 25;
+  const pageSize = params.limit
+    ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
+    : DEFAULT_PAGE_SIZE;
 
   if (offset === 0 && !maxId) {
     state.totalResults = maxMessages
@@ -138,7 +146,10 @@ const fetchPage = async (
     .filter((msg): msg is Message => msg !== undefined);
 
   if (pageMessages.length === 0) {
-    onProgress?.(state.allMessages.length, state.totalResults);
+    onProgress?.({
+      fetched: state.allMessages.length,
+      total: state.totalResults,
+    });
     return new Ok("done" as const);
   }
 
@@ -153,9 +164,12 @@ const fetchPage = async (
     );
   }
 
-  state.allMessages.push(...pageMessages);
+  Array.prototype.push.apply(state.allMessages, pageMessages);
   onPage?.(pageMessages);
-  onProgress?.(state.allMessages.length, state.totalResults);
+  onProgress?.({
+    fetched: state.allMessages.length,
+    total: state.totalResults,
+  });
 
   if (state.allMessages.length >= state.totalResults) {
     return new Ok("done" as const);
@@ -185,7 +199,11 @@ const fetchPartition = async (
 ): Promise<Result<"done" | "continue", SearchError>> => {
   const initialOffset = maxId ? 0 : config.startOffset;
 
-  for (let offset = initialOffset; offset <= 9975; offset += config.pageSize) {
+  for (
+    let offset = initialOffset;
+    offset <= MAX_OFFSET;
+    offset += config.pageSize
+  ) {
     const pageResult = await fetchPage(
       config.searchParams,
       config.token,
@@ -221,7 +239,9 @@ export const searchAllMessages = async (
     token,
     startOffset: params.offset ?? 0,
     maxMessages: params.limit,
-    pageSize: params.limit ? Math.min(params.limit, 25) : 25,
+    pageSize: params.limit
+      ? Math.min(params.limit, DEFAULT_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE,
     onProgress,
     onPage,
   };

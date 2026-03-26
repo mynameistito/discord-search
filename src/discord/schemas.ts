@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const MAX_OFFSET = 9975;
+export const MAX_PAGE_SIZE = 25;
+
 // Embed sub-objects
 
 export const EmbedFooterSchema = z.object({
@@ -105,13 +108,41 @@ export const MessageSchema = z.object({
     .optional(),
 });
 
+export const ThreadSchema = z.object({
+  id: z.string(),
+  type: z.number(),
+  name: z.string().optional(),
+  guild_id: z.string().optional(),
+  parent_id: z.string().nullable().optional(),
+  message_count: z.number().optional(),
+  member_count: z.number().optional(),
+  thread_metadata: z
+    .object({
+      archived: z.boolean(),
+      auto_archive_duration: z.number().optional(),
+      archive_timestamp: z.string().optional(),
+      locked: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export const MemberSchema = z.object({
+  user_id: z.string().optional(),
+  nick: z.string().nullable().optional(),
+  avatar: z.string().nullable().optional(),
+  roles: z.array(z.string()).optional(),
+  joined_at: z.string().optional(),
+  deaf: z.boolean().optional(),
+  mute: z.boolean().optional(),
+});
+
 export const SearchResponseSchema = z.object({
   total_results: z.number(),
   messages: z.array(z.array(MessageSchema)),
   doing_deep_historical_index: z.boolean().optional(),
   documents_indexed: z.number().optional(),
-  threads: z.array(z.unknown()).optional(),
-  members: z.array(z.unknown()).optional(),
+  threads: z.array(ThreadSchema).optional(),
+  members: z.array(MemberSchema).optional(),
 });
 
 export const IndexNotReadyResponseSchema = z.object({
@@ -158,11 +189,11 @@ export const SearchParamsSchema = z.object({
   pinned: z.boolean().optional(),
   repliedToMessageId: z.array(z.string()).optional(),
   repliedToUserId: z.array(z.string()).optional(),
-  slop: z.number().optional(),
+  slop: z.number().int().min(0).optional(),
   sortBy: z.enum(["timestamp", "relevance"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
-  offset: z.number().optional(),
-  limit: z.number().optional(),
+  offset: z.number().int().min(0).max(MAX_OFFSET).optional(),
+  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
 });
 
 // Inferred types
@@ -170,6 +201,8 @@ export type Embed = z.infer<typeof EmbedSchema>;
 export type EmbedField = z.infer<typeof EmbedFieldSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type Message = z.infer<typeof MessageSchema>;
+export type Thread = z.infer<typeof ThreadSchema>;
+export type Member = z.infer<typeof MemberSchema>;
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 export type IndexNotReadyResponse = z.infer<typeof IndexNotReadyResponseSchema>;
 export type SearchParams = z.infer<typeof SearchParamsSchema>;

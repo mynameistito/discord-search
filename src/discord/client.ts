@@ -1,5 +1,5 @@
 import { Result } from "better-result";
-import type { z } from "zod";
+import { z } from "zod";
 import { IndexNotReadyResponseSchema } from "@/discord/schemas.ts";
 import {
   DiscordApiError,
@@ -9,6 +9,14 @@ import {
 } from "@/errors.ts";
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
+const DEFAULT_MAX_RETRIES_429 = 3;
+const DEFAULT_MAX_RETRIES_202 = 5;
+const DEFAULT_RETRY_DELAY_SECONDS = 2;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+
+const RateLimitBodySchema = z.object({
+  retry_after: z.number(),
+});
 
 type RateLimitState = {
   lastRequestTime: number;
@@ -58,17 +66,33 @@ const makeHeaders = (token: string) => ({
 
 const fetchWithAuth = async (
   url: string,
-  token: string
+  token: string,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
 ): Promise<Result<Response, DiscordApiError>> => {
-  return await Result.tryPromise({
-    try: () => fetch(url, { headers: makeHeaders(token) }),
-    catch: (cause) =>
-      new DiscordApiError({
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const result = await Result.tryPromise({
+    try: () =>
+      fetch(url, { headers: makeHeaders(token), signal: controller.signal }),
+    catch: (cause) => {
+      if (cause instanceof DOMException && cause.name === "AbortError") {
+        return new DiscordApiError({
+          message: `Request timed out after ${timeoutMs}ms`,
+          status: 0,
+          body: null,
+        });
+      }
+      return new DiscordApiError({
         message: `Network error: ${cause instanceof Error ? cause.message : String(cause)}`,
         status: 0,
         body: null,
-      }),
+      });
+    },
   });
+
+  clearTimeout(timer);
+  return result;
 };
 
 type DiscordFetchError =
@@ -83,7 +107,7 @@ const handle429 = async (
   maxRetries: number
 ): Promise<Result<"retry", DiscordApiError | RateLimitExhaustedError>> => {
   const bodyResult = await Result.tryPromise({
-    try: () => response.json() as Promise<{ retry_after: number }>,
+    try: () => response.json() as Promise<unknown>,
     catch: () =>
       new DiscordApiError({
         message: "Failed to parse 429 response body",
@@ -96,7 +120,18 @@ const handle429 = async (
     return bodyResult;
   }
 
-  const retryAfter = bodyResult.value.retry_after;
+  const parsed = RateLimitBodySchema.safeParse(bodyResult.value);
+  if (!parsed.success) {
+    return Result.err(
+      new DiscordApiError({
+        message: "Invalid 429 response body",
+        status: 429,
+        body: bodyResult.value,
+      })
+    );
+  }
+
+  const retryAfter = parsed.data.retry_after;
 
   if (attempt >= maxRetries) {
     return Result.err(
@@ -107,8 +142,25 @@ const handle429 = async (
     );
   }
 
-  await sleep(retryAfter * 1000);
+  const backoffMs = retryAfter * 1000 * 2 ** attempt + Math.random() * 1000;
+  await sleep(backoffMs);
   return Result.ok("retry" as const);
+};
+
+const parseRetryAfterFrom202 = async (response: Response): Promise<number> => {
+  const bodyResult = await Result.tryPromise({
+    try: () => response.json() as Promise<unknown>,
+    catch: () => null,
+  });
+
+  if (bodyResult.isErr()) {
+    return DEFAULT_RETRY_DELAY_SECONDS;
+  }
+
+  const parsed = IndexNotReadyResponseSchema.safeParse(bodyResult.value);
+  return parsed.success
+    ? parsed.data.retry_after || DEFAULT_RETRY_DELAY_SECONDS
+    : DEFAULT_RETRY_DELAY_SECONDS;
 };
 
 const handle202 = async <T>(
@@ -118,22 +170,7 @@ const handle202 = async <T>(
   schema: z.ZodType<T>,
   maxRetries: number
 ): Promise<Result<T, DiscordFetchError>> => {
-  const bodyResult = await Result.tryPromise({
-    try: () => response.json() as Promise<unknown>,
-    catch: () =>
-      new DiscordApiError({
-        message: "Failed to parse 202 response body",
-        status: 202,
-        body: null,
-      }),
-  });
-
-  if (bodyResult.isErr()) {
-    return bodyResult;
-  }
-
-  const parsed = IndexNotReadyResponseSchema.safeParse(bodyResult.value);
-  const retryAfter = parsed.success ? parsed.data.retry_after || 2 : 2;
+  let retryAfter = await parseRetryAfterFrom202(response);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     await sleep(retryAfter * 1000);
@@ -147,9 +184,28 @@ const handle202 = async <T>(
     const retryResponse = retryResult.value;
     updateRateLimitState(retryResponse.headers);
 
-    if (retryResponse.status !== 202) {
-      return await parseResponse(retryResponse, schema);
+    if (retryResponse.status === 429) {
+      const rateLimitResult = await handle429(
+        retryResponse,
+        attempt,
+        maxRetries
+      );
+      if (rateLimitResult.isErr()) {
+        return rateLimitResult;
+      }
+      continue;
     }
+
+    if (retryResponse.status === 202) {
+      retryAfter = await parseRetryAfterFrom202(retryResponse);
+      continue;
+    }
+
+    if (!retryResponse.ok) {
+      return await handleErrorResponse(retryResponse);
+    }
+
+    return await parseResponse(retryResponse, schema);
   }
 
   return Result.err(
@@ -213,8 +269,8 @@ export const discordFetch = async <T>(
   path: string,
   schema: z.ZodType<T>,
   token: string,
-  maxRetries429 = 3,
-  maxRetries202 = 5
+  maxRetries429 = DEFAULT_MAX_RETRIES_429,
+  maxRetries202 = DEFAULT_MAX_RETRIES_202
 ): Promise<Result<T, DiscordFetchError>> => {
   const url = `${DISCORD_API_BASE}${path}`;
 

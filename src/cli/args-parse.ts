@@ -129,17 +129,38 @@ const applySearchParamFlag = (
   }
 
   if (arg === "--slop" && next) {
-    params.slop = Number.parseInt(next, 10);
+    const slop = Number.parseInt(next, 10);
+    if (!Number.isFinite(slop)) {
+      return exitWithError(
+        `Invalid value for --slop: expected integer, got "${next}"`,
+        "search"
+      );
+    }
+    params.slop = slop;
     return 2;
   }
 
   if (arg === "--offset" && next) {
-    params.offset = Number.parseInt(next, 10);
+    const offset = Number.parseInt(next, 10);
+    if (!Number.isFinite(offset)) {
+      return exitWithError(
+        `Invalid value for --offset: expected integer, got "${next}"`,
+        "search"
+      );
+    }
+    params.offset = offset;
     return 2;
   }
 
   if (arg === "--limit" && next) {
-    params.limit = Number.parseInt(next, 10);
+    const limit = Number.parseInt(next, 10);
+    if (!Number.isFinite(limit)) {
+      return exitWithError(
+        `Invalid value for --limit: expected integer, got "${next}"`,
+        "search"
+      );
+    }
+    params.limit = limit;
     return 2;
   }
 
@@ -214,7 +235,14 @@ const parseSearchCommand = (
   remaining: string[],
   global: GlobalFlags & { guild?: string }
 ): SearchArgs => {
-  const parsed = parseSearchFlags(remaining.slice(1), global.guild);
+  const guildId = global.guild;
+  if (!guildId) {
+    return exitWithError(
+      "Missing required --guild/-g (guildId) for search command",
+      "search"
+    );
+  }
+  const parsed = parseSearchFlags(remaining.slice(1), guildId);
   return ParsedArgsSchema.parse({
     command: "search",
     help: global.help,
@@ -281,6 +309,12 @@ const parsePresetSaveAction = (
   const name = remaining[2];
   if (!name) {
     return exitWithError("preset name is required for 'preset save'", "preset");
+  }
+  if (!global.guild) {
+    return exitWithError(
+      "Missing required --guild/-g (guildId) for preset save",
+      "preset"
+    );
   }
   const parsed = parseSearchFlags(remaining.slice(3), global.guild);
   return ParsedArgsSchema.parse({

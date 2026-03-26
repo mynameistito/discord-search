@@ -14,9 +14,10 @@ const chmodSafe = async (path: string, mode: number): Promise<void> => {
       err &&
       typeof err === "object" &&
       "code" in err &&
-      err.code !== "ENOTSUP" &&
-      err.code !== "EINVAL"
+      (err.code === "ENOTSUP" || err.code === "EINVAL")
     ) {
+      // Ignore known unsupported cases (e.g., Windows)
+    } else {
       throw err;
     }
   }

@@ -8,7 +8,7 @@
 TypeScript CLI tool for Discord message search with filtering, presets, and export. Built with Bun runtime, Zod validation, better-result error handling, and @clack/prompts for interactive UI.
 
 ## STRUCTURE
-```
+```text
 src/
 ├── cli/           # CLI UI (args, prompts, browser, keys, ansi)
 ├── handlers/        # Business logic (search, presets, settings, export)

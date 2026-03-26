@@ -16,11 +16,7 @@ export type Config = {
   token: string;
 };
 
-export type SettingsJson = {
-  token?: string;
-  guildId?: string;
-  clientId?: string;
-};
+export type SettingsJson = z.infer<typeof SettingsSchema>;
 
 const readSettingsFile = async (): Promise<SettingsJson> => {
   const file = Bun.file(SETTINGS_FILE);
@@ -50,7 +46,16 @@ const readSettingsFile = async (): Promise<SettingsJson> => {
 };
 
 export const loadConfig = async (): Promise<Result<Config, ConfigError>> => {
-  const settings = await readSettingsFile();
+  let settings: SettingsJson;
+  try {
+    settings = await readSettingsFile();
+  } catch (err) {
+    return new Err(
+      new ConfigError({
+        message: `Failed to read settings: ${err instanceof Error ? err.message : String(err)}`,
+      })
+    );
+  }
 
   const token = process.env.DISCORD_BOT_TOKEN ?? settings.token;
 
@@ -97,14 +102,14 @@ export const saveSettings = async (
     try {
       await chmod(SETTINGS_FILE, 0o600);
     } catch (err) {
-      // Only ignore known unsupported cases (e.g., Windows)
       if (
         err &&
         typeof err === "object" &&
         "code" in err &&
-        err.code !== "ENOTSUP" &&
-        err.code !== "EINVAL"
+        (err.code === "ENOTSUP" || err.code === "EINVAL")
       ) {
+        // Ignore known unsupported cases (e.g., Windows)
+      } else {
         return new Err(
           new ExportError({
             message: `Failed to secure settings file permissions: ${err instanceof Error ? err.message : String(err)}`,
@@ -131,7 +136,7 @@ const BOT_PERMISSION_FLAGS = {
 } as const;
 
 const BOT_PERMISSIONS = Object.values(BOT_PERMISSION_FLAGS).reduce(
-  (a, b) => a + b,
+  (a, b) => a | b,
   0
 );
 

@@ -129,8 +129,22 @@ export const saveSettings = async (
     // Secure file permissions (owner-only)
     try {
       await chmod(SETTINGS_FILE, 0o600);
-    } catch {
-      // chmod may fail on some systems
+    } catch (err) {
+      // Only ignore known unsupported cases (e.g., Windows)
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err.code !== "ENOTSUP" &&
+        err.code !== "EINVAL"
+      ) {
+        return new Err(
+          new ExportError({
+            message: `Failed to secure settings file permissions: ${err instanceof Error ? err.message : String(err)}`,
+            cause: err,
+          })
+        );
+      }
     }
 
     return new Ok(undefined);

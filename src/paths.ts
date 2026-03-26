@@ -13,8 +13,17 @@ export const ensureAppDir = async (): Promise<void> => {
   // Ensure permissions are correct (in case directory existed)
   try {
     await chmod(APP_DIR, 0o700);
-  } catch {
-    // chmod may fail on some systems, but mkdir already set mode
+  } catch (err) {
+    // Only ignore known unsupported cases (e.g., Windows)
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code !== "ENOTSUP" &&
+      err.code !== "EINVAL"
+    ) {
+      throw err;
+    }
   }
 
   // Create OUTPUT_DIR with owner-only permissions
@@ -23,8 +32,17 @@ export const ensureAppDir = async (): Promise<void> => {
   // Ensure OUTPUT_DIR permissions are correct
   try {
     await chmod(OUTPUT_DIR, 0o700);
-  } catch {
-    // chmod may fail on some systems, but mkdir already set mode
+  } catch (err) {
+    // Only ignore known unsupported cases (e.g., Windows)
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code !== "ENOTSUP" &&
+      err.code !== "EINVAL"
+    ) {
+      throw err;
+    }
   }
 
   const gitignorePath = join(APP_DIR, ".gitignore");

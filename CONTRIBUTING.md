@@ -18,7 +18,7 @@ bun install
 Pre-commit hooks are managed by [Lefthook](https://github.com/evilmartians/lefthook) and run automatically on commit. They run in parallel:
 
 - **Lint & format** (`ultracite fix`) — auto-fixes JS/TS/JSON/CSS files
-- **Type check** (`tsgo --noEmit`) — TypeScript validation on changed `.ts` files
+- **Type check** (`tsc --noEmit`) — TypeScript validation on changed `.ts` files
 - **YAML validation** (`v8r`) — validates `.yml`/`.yaml` files
 - **Cleanup script** — runs `scripts/cleanup.ts` on every commit
 
@@ -54,7 +54,7 @@ scripts/
 
 ```sh
 bun test          # run full test suite with Bun
-bun run typecheck # type-check with tsgo
+bun run typecheck # type-check with tsc --noEmit
 bun run check     # lint with Biome/Ultracite (report only)
 bun run fix       # lint + auto-fix
 bun run build     # build to dist/

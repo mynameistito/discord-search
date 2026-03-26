@@ -15,7 +15,7 @@ Only the latest release receives security fixes.
 
 Use GitHub's private vulnerability reporting:
 
-1. Go to the [Security tab](../../security) of this repository.
+1. Go to [https://github.com/mynameistito/discord-search/security](https://github.com/mynameistito/discord-search/security) to report a vulnerability.
 2. Click **"Report a vulnerability"**.
 3. Describe the issue, steps to reproduce, and potential impact.
 

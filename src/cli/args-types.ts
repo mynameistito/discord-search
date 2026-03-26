@@ -13,6 +13,11 @@ export const InteractiveArgsSchema = GlobalFlagsSchema.extend({
   clientId: z.string().optional(),
 });
 
+export const HelpArgsSchema = GlobalFlagsSchema.extend({
+  command: z.literal("help"),
+  targetCommand: z.enum(["search", "preset", "settings"]).optional(),
+});
+
 export const SearchArgsSchema = GlobalFlagsSchema.extend({
   command: z.literal("search"),
   params: SearchParamsSchema,
@@ -93,6 +98,7 @@ const SettingsArgsSchema = z.discriminatedUnion("action", [
 
 export const ParsedArgsSchema = z.union([
   InteractiveArgsSchema,
+  HelpArgsSchema,
   SearchArgsSchema,
   PresetArgsSchema,
   SettingsArgsSchema,
@@ -100,6 +106,7 @@ export const ParsedArgsSchema = z.union([
 
 export type GlobalFlags = z.infer<typeof GlobalFlagsSchema>;
 export type InteractiveArgs = z.infer<typeof InteractiveArgsSchema>;
+export type HelpArgs = z.infer<typeof HelpArgsSchema>;
 export type SearchArgs = z.infer<typeof SearchArgsSchema>;
 export type PresetListArgs = z.infer<typeof PresetListArgsSchema>;
 export type PresetRunArgs = z.infer<typeof PresetRunArgsSchema>;

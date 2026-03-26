@@ -191,9 +191,10 @@ export { HELP_TEXT, SUBCOMMAND_HELP };
 export const exitWithError = (message: string, subcommand?: string): never => {
   process.stderr.write(`${ANSI_RED}Error: ${message}${ANSI_RESET}\n`);
 
-  if (subcommand && SUBCOMMAND_HELP[subcommand]) {
+  const baseCommand = subcommand?.split(" ")[0];
+  if (baseCommand && SUBCOMMAND_HELP[baseCommand]) {
     process.stderr.write(
-      `\n${ANSI_DIM}Run ${ANSI_YELLOW}discord-search ${subcommand} --help${ANSI_RESET}${ANSI_DIM} for usage info.${ANSI_RESET}\n`
+      `\n${ANSI_DIM}Run ${ANSI_YELLOW}discord-search ${baseCommand} --help${ANSI_RESET}${ANSI_DIM} for usage info.${ANSI_RESET}\n`
     );
   } else {
     process.stderr.write(

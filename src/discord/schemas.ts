@@ -1,5 +1,19 @@
 import { z } from "zod";
 
+export const MAX_OFFSET = 9975;
+export const MAX_PAGE_SIZE = 25;
+
+const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+
+const snowflakeSchema = z
+  .string()
+  .regex(SNOWFLAKE_REGEX, {
+    message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+  })
+  .max(20, { message: "Discord ID exceeds maximum length of 20 characters" });
+
+const snowflakeArraySchema = z.array(snowflakeSchema);
+
 // Embed sub-objects
 
 export const EmbedFooterSchema = z.object({
@@ -8,19 +22,15 @@ export const EmbedFooterSchema = z.object({
   proxy_icon_url: z.string().optional(),
 });
 
-export const EmbedImageSchema = z.object({
+const EmbedMediaSchema = z.object({
   url: z.string(),
   proxy_url: z.string().optional(),
   height: z.number().optional(),
   width: z.number().optional(),
 });
 
-export const EmbedThumbnailSchema = z.object({
-  url: z.string(),
-  proxy_url: z.string().optional(),
-  height: z.number().optional(),
-  width: z.number().optional(),
-});
+export const EmbedImageSchema = EmbedMediaSchema;
+export const EmbedThumbnailSchema = EmbedMediaSchema;
 
 export const EmbedVideoSchema = z.object({
   url: z.string().optional(),
@@ -64,7 +74,7 @@ export const EmbedSchema = z.object({
 });
 
 export const UserSchema = z.object({
-  id: z.string(),
+  id: snowflakeSchema,
   username: z.string(),
   discriminator: z.string().optional(),
   avatar: z.string().nullable().optional(),
@@ -72,7 +82,7 @@ export const UserSchema = z.object({
 });
 
 export const AttachmentSchema = z.object({
-  id: z.string(),
+  id: snowflakeSchema,
   filename: z.string(),
   size: z.number(),
   url: z.string(),
@@ -81,8 +91,9 @@ export const AttachmentSchema = z.object({
 });
 
 export const MessageSchema = z.object({
-  id: z.string(),
-  channel_id: z.string(),
+  id: snowflakeSchema,
+  channel_id: snowflakeSchema,
+  guild_id: snowflakeSchema.optional(),
   author: UserSchema,
   content: z.string(),
   timestamp: z.string(),
@@ -96,8 +107,8 @@ export const MessageSchema = z.object({
   attachments: z.array(AttachmentSchema).optional(),
   referenced_message: z
     .object({
-      id: z.string(),
-      channel_id: z.string(),
+      id: snowflakeSchema,
+      channel_id: snowflakeSchema,
       author: UserSchema.optional(),
       content: z.string().optional(),
     })
@@ -105,13 +116,45 @@ export const MessageSchema = z.object({
     .optional(),
 });
 
+export const ThreadSchema = z.object({
+  id: snowflakeSchema,
+  type: z.number(),
+  name: z.string().optional(),
+  guild_id: snowflakeSchema.optional(),
+  parent_id: snowflakeSchema.nullable().optional(),
+  message_count: z.number().optional(),
+  member_count: z.number().optional(),
+  thread_metadata: z
+    .object({
+      archived: z.boolean(),
+      auto_archive_duration: z.number().optional(),
+      archive_timestamp: z.string().optional(),
+      locked: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export const MemberSchema = z.object({
+  user_id: snowflakeSchema.optional(),
+  nick: z.string().nullable().optional(),
+  avatar: z.string().nullable().optional(),
+  roles: z.array(snowflakeSchema).optional(),
+  joined_at: z.string().optional(),
+  deaf: z.boolean().optional(),
+  mute: z.boolean().optional(),
+});
+
 export const SearchResponseSchema = z.object({
   total_results: z.number(),
   messages: z.array(z.array(MessageSchema)),
   doing_deep_historical_index: z.boolean().optional(),
   documents_indexed: z.number().optional(),
-  threads: z.array(z.unknown()).optional(),
-  members: z.array(z.unknown()).optional(),
+  threads: z.array(ThreadSchema).optional(),
+  members: z.array(MemberSchema).optional(),
+});
+
+export const RateLimitBodySchema = z.object({
+  retry_after: z.number(),
 });
 
 export const IndexNotReadyResponseSchema = z.object({
@@ -124,15 +167,15 @@ export const IndexNotReadyResponseSchema = z.object({
 export const SearchParamsSchema = z.object({
   attachmentExtension: z.array(z.string()).optional(),
   attachmentFilename: z.array(z.string()).optional(),
-  authorId: z.array(z.string()).optional(),
+  authorId: snowflakeArraySchema.optional(),
   authorType: z.array(z.enum(["user", "bot", "webhook"])).optional(),
-  channelId: z.array(z.string()).optional(),
+  channelId: snowflakeArraySchema.optional(),
   content: z.string().optional(),
   embedProvider: z.array(z.string()).optional(),
   embedType: z
     .array(z.enum(["image", "video", "gif", "sound", "article"]))
     .optional(),
-  guildId: z.string(),
+  guildId: snowflakeSchema,
   has: z
     .array(
       z.enum([
@@ -150,19 +193,19 @@ export const SearchParamsSchema = z.object({
     .optional(),
   includeNsfw: z.boolean().optional(),
   linkHostname: z.array(z.string()).optional(),
-  maxId: z.string().optional(),
+  maxId: snowflakeSchema.optional(),
   mentionEveryone: z.boolean().optional(),
-  mentions: z.array(z.string()).optional(),
-  mentionsRoleId: z.array(z.string()).optional(),
-  minId: z.string().optional(),
+  mentions: snowflakeArraySchema.optional(),
+  mentionsRoleId: snowflakeArraySchema.optional(),
+  minId: snowflakeSchema.optional(),
   pinned: z.boolean().optional(),
-  repliedToMessageId: z.array(z.string()).optional(),
-  repliedToUserId: z.array(z.string()).optional(),
-  slop: z.number().optional(),
+  repliedToMessageId: snowflakeArraySchema.optional(),
+  repliedToUserId: snowflakeArraySchema.optional(),
+  slop: z.number().int().min(0).optional(),
   sortBy: z.enum(["timestamp", "relevance"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
-  offset: z.number().optional(),
-  limit: z.number().optional(),
+  offset: z.number().int().min(0).max(MAX_OFFSET).optional(),
+  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
 });
 
 // Inferred types
@@ -170,6 +213,8 @@ export type Embed = z.infer<typeof EmbedSchema>;
 export type EmbedField = z.infer<typeof EmbedFieldSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type Message = z.infer<typeof MessageSchema>;
+export type Thread = z.infer<typeof ThreadSchema>;
+export type Member = z.infer<typeof MemberSchema>;
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 export type IndexNotReadyResponse = z.infer<typeof IndexNotReadyResponseSchema>;
 export type SearchParams = z.infer<typeof SearchParamsSchema>;

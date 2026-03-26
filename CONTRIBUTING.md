@@ -18,7 +18,7 @@ bun install
 Pre-commit hooks are managed by [Lefthook](https://github.com/evilmartians/lefthook) and run automatically on commit. They run in parallel:
 
 - **Lint & format** (`ultracite fix`) — auto-fixes JS/TS/JSON/CSS files
-- **Type check** (`tsgo --noEmit`) — TypeScript validation on changed `.ts` files
+- **Type check** (`tsc --noEmit`) — TypeScript validation on changed `.ts` files
 - **YAML validation** (`v8r`) — validates `.yml`/`.yaml` files
 - **Cleanup script** — runs `scripts/cleanup.ts` on every commit
 
@@ -45,16 +45,16 @@ __tests__/            # Test directory
 scripts/
   cleanup.ts          # Pre-commit cleanup hook
 
-.github/workflows/
-  ci.yml              # Typecheck → lint → build → test (Bun latest/canary, Node 22/24)
-  release.yml         # Changesets-based npm publish
+ .github/workflows/
+   ci.yml              # Typecheck → lint → build → test (Bun latest/canary)
+   release.yml         # Changesets-based npm publish
 ```
 
 ## Development
 
 ```sh
 bun test          # run full test suite with Bun
-bun run typecheck # type-check with tsgo
+bun run typecheck # type-check with tsc --noEmit
 bun run check     # lint with Biome/Ultracite (report only)
 bun run fix       # lint + auto-fix
 bun run build     # build to dist/
@@ -136,7 +136,6 @@ CI runs on every push and PR to `main`:
 1. **check** — typecheck + lint
 2. **build** — build verification + `npm pack --dry-run`
 3. **test-bun** — `bun test` on Bun latest and canary (canary failures are non-blocking)
-4. **test-node** — `bun run test:node` on Node 22 and 24
 
 All jobs must pass for a PR to be mergeable.
 

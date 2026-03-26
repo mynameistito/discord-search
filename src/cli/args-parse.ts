@@ -8,20 +8,21 @@ import {
   type PresetSaveArgs,
   type SearchArgs,
 } from "@/cli/args-types.ts";
-import { parseCommaSeparated } from "@/cli/prompts.ts";
+import { parseCommaSeparated } from "@/cli/utils.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
 // --- Arg parsing helpers ---
 
 const consumeFlag = (
   args: string[],
-  i: number
-): { value: string | undefined; skip: number } => {
+  i: number,
+  flagName: string
+): { value: string; skip: number } => {
   const next = args[i + 1];
   if (next && !next.startsWith("-")) {
     return { value: next, skip: 1 };
   }
-  return { value: undefined, skip: 0 };
+  return exitWithError(`Flag ${flagName} requires a value`);
 };
 
 const parseGlobalFlags = (
@@ -44,15 +45,15 @@ const parseGlobalFlags = (
     } else if (arg === "--version" || arg === "-v") {
       global.version = true;
     } else if (arg === "--token" || arg === "-t") {
-      const { value, skip } = consumeFlag(args, i);
+      const { value, skip } = consumeFlag(args, i, arg);
       global.token = value;
       i += skip;
     } else if (arg === "--guild" || arg === "-g") {
-      const { value, skip } = consumeFlag(args, i);
+      const { value, skip } = consumeFlag(args, i, arg);
       global.guild = value;
       i += skip;
     } else if (arg === "--client-id" || arg === "-c") {
-      const { value, skip } = consumeFlag(args, i);
+      const { value, skip } = consumeFlag(args, i, arg);
       global.clientId = value;
       i += skip;
     } else {
@@ -106,6 +107,24 @@ type SearchFlagsResult = {
   savePreset?: string;
 };
 
+/** True when the token looks like a value (not another flag). */
+const isValue = (s: string | undefined): s is string =>
+  s !== undefined && !s.startsWith("-");
+
+/** Validate and return an integer value for a flag, or exit with error. */
+const requireInt = (flag: string, next: string | undefined): number => {
+  if (!isValue(next)) {
+    return exitWithError(`Flag ${flag} requires a value`, "search");
+  }
+  if (!INTEGER_REGEX.test(next)) {
+    return exitWithError(
+      `Invalid value for ${flag}: expected integer, got "${next}"`,
+      "search"
+    );
+  }
+  return Number.parseInt(next, 10);
+};
+
 // Returns number of args consumed: 0 = no match, 1 = flag only, 2 = flag + value
 const applySearchParamFlag = (
   arg: string,
@@ -113,13 +132,19 @@ const applySearchParamFlag = (
   params: Record<string, unknown>
 ): number => {
   const commaSepKey = COMMA_SEP_FLAGS[arg];
-  if (commaSepKey && next) {
+  if (commaSepKey) {
+    if (!isValue(next)) {
+      return exitWithError(`Flag ${arg} requires a value`, "search");
+    }
     params[commaSepKey] = parseCommaSeparated(next);
     return 2;
   }
 
   const stringKey = STRING_FLAGS[arg];
-  if (stringKey && next) {
+  if (stringKey) {
+    if (!isValue(next)) {
+      return exitWithError(`Flag ${arg} requires a value`, "search");
+    }
     params[stringKey] = next;
     return 2;
   }
@@ -130,41 +155,31 @@ const applySearchParamFlag = (
     return 1;
   }
 
-  if (arg === "--slop" && next) {
-    if (!INTEGER_REGEX.test(next)) {
-      return exitWithError(
-        `Invalid value for --slop: expected integer, got "${next}"`,
-        "search"
-      );
-    }
-    params.slop = Number.parseInt(next, 10);
+  if (arg === "--slop") {
+    params.slop = requireInt("--slop", next);
     return 2;
   }
 
-  if (arg === "--offset" && next) {
-    if (!INTEGER_REGEX.test(next)) {
-      return exitWithError(
-        `Invalid value for --offset: expected integer, got "${next}"`,
-        "search"
-      );
-    }
-    params.offset = Number.parseInt(next, 10);
+  if (arg === "--offset") {
+    params.offset = requireInt("--offset", next);
     return 2;
   }
 
-  if (arg === "--limit" && next) {
-    if (!INTEGER_REGEX.test(next)) {
-      return exitWithError(
-        `Invalid value for --limit: expected integer, got "${next}"`,
-        "search"
-      );
-    }
-    params.limit = Number.parseInt(next, 10);
+  if (arg === "--limit") {
+    params.limit = requireInt("--limit", next);
     return 2;
   }
 
   return 0;
 };
+
+const VALID_EXPORT_FORMATS = new Set([
+  "json",
+  "csv-messages",
+  "csv-embeds",
+  "csv-fields",
+  "all",
+]);
 
 // Parses common output flags (--export, --output-dir, --json) from args
 const parseOutputFlags = (
@@ -178,6 +193,12 @@ const parseOutputFlags = (
     const arg = args[i];
     const next = args[i + 1];
     if (arg === "--export" && next) {
+      if (!VALID_EXPORT_FORMATS.has(next)) {
+        exitWithError(
+          `Invalid export format: "${next}". Valid formats: ${[...VALID_EXPORT_FORMATS].join(", ")}`,
+          "search"
+        );
+      }
       exportFormat = next;
       i++;
     } else if (arg === "--output-dir" && next) {
@@ -213,9 +234,26 @@ const parseSearchFlags = (
       continue;
     }
 
-    if (arg === "--save-preset" && next) {
+    if (arg === "--save-preset") {
+      if (!isValue(next)) {
+        exitWithError("Flag --save-preset requires a value", "search");
+      }
       savePreset = next;
       i++;
+      continue;
+    }
+
+    // Skip flags already handled by parseOutputFlags
+    if (arg === "--export" || arg === "--output-dir") {
+      i++; // skip value
+      continue;
+    }
+    if (arg === "--json") {
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      exitWithError(`Unknown flag: "${arg}"`, "search");
     }
   }
 
@@ -235,13 +273,27 @@ const parseSearchCommand = (
   global: GlobalFlags & { guild?: string }
 ): SearchArgs => {
   const guildId = global.guild;
-  const parsed = parseSearchFlags(remaining.slice(1), guildId);
   if (!(global.help || guildId)) {
     return exitWithError(
       "Missing required --guild/-g (guildId) for search command",
       "search"
     );
   }
+
+  // Short-circuit for help mode — SearchParamsSchema requires a valid guildId,
+  // so we return directly without Zod validation when no guild is provided.
+  if (global.help && !guildId) {
+    return {
+      command: "search",
+      help: true,
+      version: global.version,
+      token: global.token,
+      params: {} as SearchArgs["params"],
+      json: false,
+    } as SearchArgs;
+  }
+
+  const parsed = parseSearchFlags(remaining.slice(1), guildId);
   return ParsedArgsSchema.parse({
     command: "search",
     help: global.help,
@@ -280,15 +332,25 @@ const parsePresetRunAllAction = (
   const restArgs = remaining.slice(2);
   const names: string[] = [];
   let all = false;
-  const flags = parseOutputFlags(restArgs);
 
-  for (const arg of restArgs) {
+  // Flags that consume the next argument as a value
+  const valueFlagSet = new Set(["--export", "--output-dir"]);
+
+  for (let i = 0; i < restArgs.length; i++) {
+    const arg = restArgs[i] ?? "";
+
     if (arg === "--all") {
       all = true;
+    } else if (arg === "--json") {
+      // handled below via parseOutputFlags
+    } else if (valueFlagSet.has(arg)) {
+      i++; // skip the value argument so it isn't collected as a name
     } else if (!arg.startsWith("-")) {
       names.push(arg);
     }
   }
+
+  const flags = parseOutputFlags(restArgs);
 
   return ParsedArgsSchema.parse({
     command: "preset",
@@ -297,6 +359,7 @@ const parsePresetRunAllAction = (
     all,
     export: flags.export,
     outputDir: flags.outputDir,
+    json: flags.json,
     ...global,
   }) as PresetRunAllArgs;
 };
@@ -409,6 +472,13 @@ const parseSettingsCommand = (
     if (!(key && value)) {
       return exitWithError(
         "key and value required. Usage: settings set <key> <value>",
+        "settings"
+      );
+    }
+    const VALID_SETTINGS_KEYS = new Set(["token", "client-id", "guild"]);
+    if (!VALID_SETTINGS_KEYS.has(key)) {
+      return exitWithError(
+        `Unknown settings key: "${key}". Valid keys: ${[...VALID_SETTINGS_KEYS].join(", ")}`,
         "settings"
       );
     }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SearchParamsSchema } from "@/discord/schemas.ts";
 
-const GlobalFlagsSchema = z.object({
+export const GlobalFlagsSchema = z.object({
   help: z.boolean(),
   version: z.boolean(),
   token: z.string().optional(),
@@ -43,6 +43,7 @@ export const PresetRunAllArgsSchema = GlobalFlagsSchema.extend({
   all: z.boolean(),
   export: z.string().optional(),
   outputDir: z.string().optional(),
+  json: z.boolean(),
 });
 
 export const PresetSaveArgsSchema = GlobalFlagsSchema.extend({
@@ -76,17 +77,25 @@ export const SettingsInviteArgsSchema = GlobalFlagsSchema.extend({
   clientId: z.string().optional(),
 });
 
-export const ParsedArgsSchema = z.discriminatedUnion("command", [
-  InteractiveArgsSchema,
-  SearchArgsSchema,
+const PresetArgsSchema = z.discriminatedUnion("action", [
   PresetListArgsSchema,
   PresetRunArgsSchema,
   PresetRunAllArgsSchema,
   PresetSaveArgsSchema,
   PresetDeleteArgsSchema,
+]);
+
+const SettingsArgsSchema = z.discriminatedUnion("action", [
   SettingsShowArgsSchema,
   SettingsSetArgsSchema,
   SettingsInviteArgsSchema,
+]);
+
+export const ParsedArgsSchema = z.union([
+  InteractiveArgsSchema,
+  SearchArgsSchema,
+  PresetArgsSchema,
+  SettingsArgsSchema,
 ]);
 
 export type GlobalFlags = z.infer<typeof GlobalFlagsSchema>;

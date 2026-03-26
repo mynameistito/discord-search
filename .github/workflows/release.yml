@@ -36,7 +36,7 @@ jobs:
         id: changesets
         uses: changesets/action@e87c8ed249971350e47fab7515075f44eb134e5b # v1.7.0
         with:
-          publish: bun run release
+          publish: npm publish
           version: bun run version
           commit: "chore: release package"
           title: "chore: release package"

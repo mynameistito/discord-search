@@ -2,7 +2,7 @@
 Search Discord server messages from your terminal. Filter by author, content type, mentions, and more. Export to JSON or CSV.
 Licensed under MIT. See [LICENSE](LICENSE) for details.
 
-[!WARNING]
+> [!WARNING]
 > This is an **unofficial** tool. It is not affiliated with, endorsed by, or connected to Discord in any way.
 >
 > It uses Discord's public API to search messages in servers where **your** bot has the proper permissions. You are fully responsible for complying with Discord's [Terms of Service](https://discord.com/terms), [Developer Policy](https://support-dev.discord.com/hc/en-us/articles/8563934450327-Discord-Developer-Policy), and [Message Content Intent Review Policy](https://support-dev.discord.com/hc/en-us/articles/5324827539479-Message-Content-Intent-Review-Policy).

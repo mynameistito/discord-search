@@ -15,7 +15,7 @@ coverage
 # logs
 logs
 *.log
-report*.json
+report.*.json
 
 # dotenv environment variable files
 .env
@@ -40,3 +40,6 @@ opensrc/
 
 # Presets
 .discord-search-presets.json
+
+# Traycer
+.traycer/

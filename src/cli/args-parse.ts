@@ -214,6 +214,16 @@ const parseSearchCommand = (
   remaining: string[],
   global: GlobalFlags & { guild?: string }
 ): SearchArgs => {
+  if (global.help) {
+    return {
+      command: "search",
+      help: true,
+      version: global.version,
+      token: global.token,
+      params: { guildId: "" },
+      json: false,
+    } as SearchArgs;
+  }
   const parsed = parseSearchFlags(remaining.slice(1), global.guild);
   return ParsedArgsSchema.parse({
     command: "search",

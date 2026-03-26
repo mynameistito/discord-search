@@ -1,6 +1,6 @@
 {
   "name": "discord-search",
-  "version": "beta",
+  "version": "0.1.0-beta.1",
   "description": "Search Discord server messages from your terminal. Filter by author, content type, mentions, and more.",
   "type": "module",
   "main": "./dist/index.cjs",

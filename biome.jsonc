@@ -9,9 +9,6 @@
   },
   "linter": {
     "rules": {
-      "suspicious": {
-        "noBitwiseOperators": "off"
-      },
       "style": {
         "useConsistentTypeDefinitions": {
           "level": "error",

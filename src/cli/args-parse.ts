@@ -12,6 +12,15 @@ import {
 import { parseCommaSeparated } from "@/cli/utils.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
+const parseWithError = <T>(data: unknown, subcommand: string): T => {
+  const result = ParsedArgsSchema.safeParse(data);
+  if (!result.success) {
+    const messages = result.error.issues.map((i) => i.message);
+    exitWithError(messages.join("; "), subcommand);
+  }
+  return result.data as T;
+};
+
 // --- Arg parsing helpers ---
 
 const consumeFlag = (
@@ -108,19 +117,25 @@ type SearchFlagsResult = {
   savePreset?: string;
 };
 
+type ParseContext = "search" | "preset";
+
 /** True when the token looks like a value (not another flag). */
 const isValue = (s: string | undefined): s is string =>
   s !== undefined && !s.startsWith("-");
 
 /** Validate and return an integer value for a flag, or exit with error. */
-const requireInt = (flag: string, next: string | undefined): number => {
+const requireInt = (
+  flag: string,
+  next: string | undefined,
+  context: ParseContext
+): number => {
   if (!isValue(next)) {
-    return exitWithError(`Flag ${flag} requires a value`, "search");
+    return exitWithError(`Flag ${flag} requires a value`, context);
   }
   if (!INTEGER_REGEX.test(next)) {
     return exitWithError(
       `Invalid value for ${flag}: expected integer, got "${next}"`,
-      "search"
+      context
     );
   }
   return Number.parseInt(next, 10);
@@ -130,12 +145,13 @@ const requireInt = (flag: string, next: string | undefined): number => {
 const applySearchParamFlag = (
   arg: string,
   next: string | undefined,
-  params: Record<string, unknown>
+  params: Record<string, unknown>,
+  context: ParseContext
 ): number => {
   const commaSepKey = COMMA_SEP_FLAGS[arg];
   if (commaSepKey) {
     if (!isValue(next)) {
-      return exitWithError(`Flag ${arg} requires a value`, "search");
+      return exitWithError(`Flag ${arg} requires a value`, context);
     }
     params[commaSepKey] = parseCommaSeparated(next);
     return 2;
@@ -144,7 +160,7 @@ const applySearchParamFlag = (
   const stringKey = STRING_FLAGS[arg];
   if (stringKey) {
     if (!isValue(next)) {
-      return exitWithError(`Flag ${arg} requires a value`, "search");
+      return exitWithError(`Flag ${arg} requires a value`, context);
     }
     params[stringKey] = next;
     return 2;
@@ -157,17 +173,17 @@ const applySearchParamFlag = (
   }
 
   if (arg === "--slop") {
-    params.slop = requireInt("--slop", next);
+    params.slop = requireInt("--slop", next, context);
     return 2;
   }
 
   if (arg === "--offset") {
-    params.offset = requireInt("--offset", next);
+    params.offset = requireInt("--offset", next, context);
     return 2;
   }
 
   if (arg === "--limit") {
-    params.limit = requireInt("--limit", next);
+    params.limit = requireInt("--limit", next, context);
     return 2;
   }
 
@@ -241,21 +257,22 @@ const parseOutputFlags = (
 
 const parseSearchFlags = (
   args: string[],
-  guildId?: string
+  guildId?: string,
+  context: ParseContext = "search"
 ): SearchFlagsResult => {
   const params: Record<string, unknown> = {};
-  const output = parseOutputFlags(args, "search");
+  const output = parseOutputFlags(args, context);
   let savePreset: string | undefined;
 
   if (guildId) {
     params.guildId = guildId;
   }
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i] ?? "";
-    const next = args[i + 1];
+  for (let i = 0; i < output.leftovers.length; i++) {
+    const arg = output.leftovers[i] ?? "";
+    const next = output.leftovers[i + 1];
 
-    const consumed = applySearchParamFlag(arg, next, params);
+    const consumed = applySearchParamFlag(arg, next, params, context);
     if (consumed > 0) {
       i += consumed - 1;
       continue;
@@ -263,28 +280,19 @@ const parseSearchFlags = (
 
     if (arg === "--save-preset") {
       if (!isValue(next)) {
-        exitWithError("Flag --save-preset requires a value", "search");
+        exitWithError("Flag --save-preset requires a value", context);
       }
       savePreset = next;
       i++;
       continue;
     }
 
-    // Skip flags already handled by parseOutputFlags
-    if (arg === "--export" || arg === "--output-dir") {
-      i++; // skip value
-      continue;
-    }
-    if (arg === "--json") {
-      continue;
-    }
-
     if (arg.startsWith("-")) {
-      exitWithError(`Unknown flag: "${arg}"`, "search");
+      exitWithError(`Unknown flag: "${arg}"`, context);
     } else {
       exitWithError(
         `Unexpected positional argument: "${arg}". Did you mean --content "${arg}"?`,
-        "search"
+        context
       );
     }
   }
@@ -313,27 +321,33 @@ const parseSearchCommand = (
   }
 
   if (global.help && !guildId) {
-    return {
-      command: "help",
-      targetCommand: "search",
-      help: true,
-      version: global.version,
-      token: global.token,
-    };
+    return parseWithError<HelpArgs>(
+      {
+        command: "help",
+        targetCommand: "search",
+        help: true,
+        version: global.version,
+        token: global.token,
+      },
+      "search"
+    );
   }
 
-  const parsed = parseSearchFlags(remaining.slice(1), guildId);
-  return ParsedArgsSchema.parse({
-    command: "search",
-    help: global.help,
-    version: global.version,
-    token: global.token,
-    params: parsed.params,
-    export: parsed.export,
-    outputDir: parsed.outputDir,
-    json: parsed.json,
-    savePreset: parsed.savePreset,
-  }) as SearchArgs;
+  const parsed = parseSearchFlags(remaining.slice(1), guildId, "search");
+  return parseWithError<SearchArgs>(
+    {
+      command: "search",
+      help: global.help,
+      version: global.version,
+      token: global.token,
+      params: parsed.params,
+      export: parsed.export,
+      outputDir: parsed.outputDir,
+      json: parsed.json,
+      savePreset: parsed.savePreset,
+    },
+    "search"
+  );
 };
 
 const parsePresetRunAction = (
@@ -346,13 +360,16 @@ const parsePresetRunAction = (
   }
   const flags = parseOutputFlags(remaining.slice(3), "preset");
   checkNoLeftovers(flags.leftovers, "preset run");
-  return ParsedArgsSchema.parse({
-    command: "preset",
-    action: "run",
-    name,
-    ...flags,
-    ...global,
-  }) as PresetRunArgs;
+  return parseWithError<PresetRunArgs>(
+    {
+      command: "preset",
+      action: "run",
+      name,
+      ...flags,
+      ...global,
+    },
+    "preset"
+  );
 };
 
 const parsePresetRunAllAction = (
@@ -387,16 +404,19 @@ const parsePresetRunAllAction = (
     exitWithError("You must pass --all or at least one preset name", "preset");
   }
 
-  return ParsedArgsSchema.parse({
-    command: "preset",
-    action: "run-all",
-    names,
-    all,
-    export: flags.export,
-    outputDir: flags.outputDir,
-    json: flags.json,
-    ...global,
-  }) as PresetRunAllArgs;
+  return parseWithError<PresetRunAllArgs>(
+    {
+      command: "preset",
+      action: "run-all",
+      names,
+      all,
+      export: flags.export,
+      outputDir: flags.outputDir,
+      json: flags.json,
+      ...global,
+    },
+    "preset"
+  );
 };
 
 const parsePresetSaveAction = (
@@ -413,14 +433,17 @@ const parsePresetSaveAction = (
       "preset"
     );
   }
-  const parsed = parseSearchFlags(remaining.slice(3), global.guild);
-  return ParsedArgsSchema.parse({
-    command: "preset",
-    action: "save",
-    name,
-    params: parsed.params,
-    ...global,
-  }) as PresetSaveArgs;
+  const parsed = parseSearchFlags(remaining.slice(3), global.guild, "preset");
+  return parseWithError<PresetSaveArgs>(
+    {
+      command: "preset",
+      action: "save",
+      name,
+      params: parsed.params,
+      ...global,
+    },
+    "preset"
+  );
 };
 
 const parsePresetCommand = (
@@ -428,22 +451,30 @@ const parsePresetCommand = (
   global: GlobalFlags & { guild?: string; clientId?: string }
 ): ParsedArgs => {
   if (global.help) {
-    return ParsedArgsSchema.parse({
-      command: "preset",
-      action: "list",
-      ...global,
-    });
+    return parseWithError<HelpArgs>(
+      {
+        command: "help",
+        targetCommand: "preset",
+        help: true,
+        version: global.version,
+        token: global.token,
+      },
+      "preset"
+    );
   }
 
   const action = remaining[1];
 
   if (action === "list") {
     checkNoLeftovers(remaining.slice(2), "preset list");
-    return ParsedArgsSchema.parse({
-      command: "preset",
-      action: "list",
-      ...global,
-    });
+    return parseWithError<ParsedArgs>(
+      {
+        command: "preset",
+        action: "list",
+        ...global,
+      },
+      "preset"
+    );
   }
 
   if (action === "run") {
@@ -467,12 +498,15 @@ const parsePresetCommand = (
       );
     }
     checkNoLeftovers(remaining.slice(3), "preset delete");
-    return ParsedArgsSchema.parse({
-      command: "preset",
-      action: "delete",
-      name,
-      ...global,
-    });
+    return parseWithError<ParsedArgs>(
+      {
+        command: "preset",
+        action: "delete",
+        name,
+        ...global,
+      },
+      "preset"
+    );
   }
 
   return exitWithError(
@@ -486,22 +520,30 @@ const parseSettingsCommand = (
   global: GlobalFlags & { clientId?: string }
 ): ParsedArgs => {
   if (global.help) {
-    return ParsedArgsSchema.parse({
-      command: "settings",
-      action: "show",
-      ...global,
-    });
+    return parseWithError<HelpArgs>(
+      {
+        command: "help",
+        targetCommand: "settings",
+        help: true,
+        version: global.version,
+        token: global.token,
+      },
+      "settings"
+    );
   }
 
   const action = remaining[1];
 
   if (action === "show") {
     checkNoLeftovers(remaining.slice(2), "settings show");
-    return ParsedArgsSchema.parse({
-      command: "settings",
-      action: "show",
-      ...global,
-    });
+    return parseWithError<ParsedArgs>(
+      {
+        command: "settings",
+        action: "show",
+        ...global,
+      },
+      "settings"
+    );
   }
 
   if (action === "set") {
@@ -521,23 +563,28 @@ const parseSettingsCommand = (
       );
     }
     checkNoLeftovers(remaining.slice(4), "settings set");
-    return ParsedArgsSchema.parse({
-      command: "settings",
-      action: "set",
-      key,
-      value,
-      ...global,
-    });
+    return parseWithError<ParsedArgs>(
+      {
+        command: "settings",
+        action: "set",
+        key,
+        value,
+        ...global,
+      },
+      "settings"
+    );
   }
 
   if (action === "invite") {
     checkNoLeftovers(remaining.slice(2), "settings invite");
-    return ParsedArgsSchema.parse({
-      command: "settings",
-      action: "invite",
-      clientId: global.clientId,
-      ...global,
-    });
+    return parseWithError<ParsedArgs>(
+      {
+        command: "settings",
+        action: "invite",
+        ...global,
+      },
+      "settings"
+    );
   }
 
   return exitWithError(
@@ -553,7 +600,10 @@ export const parseArgs = (args: string[]): ParsedArgs => {
   const subcommand = remaining[0];
 
   if (!subcommand) {
-    return ParsedArgsSchema.parse({ command: "interactive", ...global });
+    return parseWithError<ParsedArgs>(
+      { command: "interactive", ...global },
+      "interactive"
+    );
   }
 
   if (subcommand === "search") {

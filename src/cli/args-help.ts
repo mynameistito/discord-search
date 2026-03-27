@@ -14,7 +14,7 @@ const heading = (text: string): string =>
 const opt = (flags: string, desc: string, width = 34): string =>
   `  ${ANSI_YELLOW}${flags.padEnd(width)}${ANSI_RESET}${ANSI_DIM}${desc}${ANSI_RESET}`;
 
-const example = (cmd: string, desc: string, width = 52): string =>
+const example = (cmd: string, desc: string, width = 60): string =>
   `  ${ANSI_GREEN}$ ${cmd.padEnd(width)}${ANSI_RESET}${ANSI_DIM}${desc}${ANSI_RESET}`;
 
 const section = (title: string, lines: string[]): string =>
@@ -180,7 +180,7 @@ const HELP_TEXT = [
   ]),
 ].join("\n\n");
 
-const SUBCOMMAND_HELP: Record<string, string> = {
+const SUBCOMMAND_HELP: Record<"search" | "preset" | "settings", string> = {
   search: SEARCH_HELP_TEXT,
   preset: PRESET_HELP_TEXT,
   settings: SETTINGS_HELP_TEXT,
@@ -191,8 +191,12 @@ export { HELP_TEXT, SUBCOMMAND_HELP };
 export const exitWithError = (message: string, subcommand?: string): never => {
   process.stderr.write(`${ANSI_RED}Error: ${message}${ANSI_RESET}\n`);
 
-  const baseCommand = subcommand?.split(" ")[0];
-  if (baseCommand && SUBCOMMAND_HELP[baseCommand]) {
+  const baseCommand = subcommand?.split(" ")[0] as
+    | "search"
+    | "preset"
+    | "settings"
+    | undefined;
+  if (baseCommand && baseCommand in SUBCOMMAND_HELP) {
     process.stderr.write(
       `\n${ANSI_DIM}Run ${ANSI_YELLOW}discord-search ${baseCommand} --help${ANSI_RESET}${ANSI_DIM} for usage info.${ANSI_RESET}\n`
     );

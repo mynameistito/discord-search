@@ -21,7 +21,9 @@ export const HelpArgsSchema = GlobalFlagsSchema.extend({
 export const SearchArgsSchema = GlobalFlagsSchema.extend({
   command: z.literal("search"),
   params: SearchParamsSchema,
-  export: z.string().optional(),
+  export: z
+    .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
+    .optional(),
   outputDir: z.string().optional(),
   json: z.boolean(),
   savePreset: z.string().optional(),
@@ -36,7 +38,9 @@ export const PresetRunArgsSchema = GlobalFlagsSchema.extend({
   command: z.literal("preset"),
   action: z.literal("run"),
   name: z.string(),
-  export: z.string().optional(),
+  export: z
+    .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
+    .optional(),
   outputDir: z.string().optional(),
   json: z.boolean(),
 });
@@ -46,7 +50,9 @@ export const PresetRunAllArgsSchema = GlobalFlagsSchema.extend({
   action: z.literal("run-all"),
   names: z.array(z.string()),
   all: z.boolean(),
-  export: z.string().optional(),
+  export: z
+    .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
+    .optional(),
   outputDir: z.string().optional(),
   json: z.boolean(),
 });
@@ -72,7 +78,7 @@ export const SettingsShowArgsSchema = GlobalFlagsSchema.extend({
 export const SettingsSetArgsSchema = GlobalFlagsSchema.extend({
   command: z.literal("settings"),
   action: z.literal("set"),
-  key: z.string(),
+  key: z.enum(["token", "client-id", "guild"]),
   value: z.string(),
 });
 
@@ -82,7 +88,7 @@ export const SettingsInviteArgsSchema = GlobalFlagsSchema.extend({
   clientId: z.string().optional(),
 });
 
-const PresetArgsSchema = z.discriminatedUnion("action", [
+export const PresetArgsSchema = z.discriminatedUnion("action", [
   PresetListArgsSchema,
   PresetRunArgsSchema,
   PresetRunAllArgsSchema,
@@ -90,7 +96,7 @@ const PresetArgsSchema = z.discriminatedUnion("action", [
   PresetDeleteArgsSchema,
 ]);
 
-const SettingsArgsSchema = z.discriminatedUnion("action", [
+export const SettingsArgsSchema = z.discriminatedUnion("action", [
   SettingsShowArgsSchema,
   SettingsSetArgsSchema,
   SettingsInviteArgsSchema,

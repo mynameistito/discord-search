@@ -59,6 +59,12 @@ const run = () => {
     process.exitCode = 1;
     return;
   }
+
+  const _exhaustive: never = parsed;
+  process.stderr.write(
+    `Unhandled command: ${(_exhaustive as ParsedArgs).command}\n`
+  );
+  process.exitCode = 1;
 };
 
 run();

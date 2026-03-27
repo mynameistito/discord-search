@@ -31,6 +31,8 @@ export const createKeyListener = (onKey: KeyHandler): (() => void) => {
     if (!wasRaw) {
       process.stdin.setRawMode(false);
     }
+    // Note: Node.js does not support un-setting encoding back to null (raw Buffer mode).
+    // If stdin had no encoding before, it remains in "utf8" after cleanup.
     if (previousEncoding !== null) {
       process.stdin.setEncoding(previousEncoding);
     }

@@ -9,8 +9,8 @@ import {
   type PresetSaveArgs,
   type SearchArgs,
 } from "@/cli/args-types.ts";
-import { parseCommaSeparated } from "@/cli/utils.ts";
-import type { SearchParams } from "@/discord/schemas.ts";
+import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
+import { type SearchParams, SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
 
 const parseWithError = <T>(data: unknown, subcommand: string): T => {
   const result = ParsedArgsSchema.safeParse(data);
@@ -106,8 +106,6 @@ const BOOLEAN_FLAGS: Record<string, keyof SearchParams> = {
   "--pinned": "pinned",
   "--mention-everyone": "mentionEveryone",
 };
-
-const INTEGER_REGEX = /^\d+$/;
 
 type SearchFlagsResult = {
   params: Omit<SearchParams, "guildId"> & { guildId?: string };
@@ -408,6 +406,13 @@ const parsePresetRunAllAction = (
     }
   }
 
+  if (all && names.length > 0) {
+    exitWithError(
+      "Cannot specify both --all and named presets",
+      "preset run-all"
+    );
+  }
+
   if (!all && names.length === 0) {
     exitWithError("You must pass --all or at least one preset name", "preset");
   }
@@ -620,6 +625,15 @@ const parseSettingsCommand = (
       return exitWithError(
         `Unknown settings key: "${key}". Valid keys: ${[...VALID_SETTINGS_KEYS].join(", ")}`,
         "settings"
+      );
+    }
+    if (
+      (key === "guild" || key === "client-id") &&
+      !SNOWFLAKE_REGEX.test(value)
+    ) {
+      return exitWithError(
+        `Invalid value for ${key}: must be a 17-20 digit snowflake ID`,
+        "settings set"
       );
     }
     checkNoLeftovers(remaining.slice(4), "settings set");

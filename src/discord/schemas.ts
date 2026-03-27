@@ -3,7 +3,7 @@ import { z } from "zod";
 export const MAX_OFFSET = 9975;
 export const MAX_PAGE_SIZE = 25;
 
-const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+export const SNOWFLAKE_REGEX = /^\d{17,20}$/;
 
 const snowflakeSchema = z.string().regex(SNOWFLAKE_REGEX, {
   message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",

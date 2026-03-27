@@ -97,7 +97,7 @@ const renderMessageView = (
   );
 };
 
-const safeWrite = (text: string): void => {
+const write = (text: string): void => {
   process.stdout.write(text);
 };
 
@@ -121,7 +121,7 @@ const handleQuit = (
 ): void => {
   try {
     cleanup();
-    safeWrite(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
+    write(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
     resolve();
   } catch (err) {
     reject(err);
@@ -144,14 +144,14 @@ const navigate = (
 
 export const browseMessages = (messages: Message[]): Promise<void> => {
   if (!process.stdin.isTTY) {
-    safeWrite("Interactive browsing requires a TTY terminal.\n");
+    write("Interactive browsing requires a TTY terminal.\n");
     return Promise.resolve();
   }
 
   return new Promise((resolve, reject) => {
     if (messages.length === 0) {
       try {
-        safeWrite(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
+        write(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
         resolve();
       } catch (err) {
         reject(err);

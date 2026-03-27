@@ -7,11 +7,8 @@ import {
   select,
   text,
 } from "@clack/prompts";
-import { parseCommaSeparated } from "@/cli/utils.ts";
-import type { SearchParams } from "@/discord/schemas.ts";
-
-const INTEGER_REGEX = /^\d+$/;
-const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
+import { type SearchParams, SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
 
 export function handleCancel<T>(value: T | symbol): asserts value is T {
   if (isCancel(value)) {

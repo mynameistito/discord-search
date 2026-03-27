@@ -1,3 +1,5 @@
+export const INTEGER_REGEX = /^\d+$/;
+
 export const parseCommaSeparated = (input: string): string[] | undefined => {
   const trimmed = input.trim();
   if (!trimmed) {

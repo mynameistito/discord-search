@@ -161,9 +161,7 @@ const fetchPage = async (
   }
 
   const data = result.value;
-  const pageSize = params.limit
-    ? Math.min(params.limit, MAX_PAGE_SIZE)
-    : MAX_PAGE_SIZE;
+  const pageSize = MAX_PAGE_SIZE; // Always use MAX_PAGE_SIZE for API calls
 
   // Only capture totalResults from the first (unfiltered) response.
   // Subsequent partitions with max_id return a smaller total_results

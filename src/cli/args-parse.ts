@@ -313,14 +313,7 @@ const parseSearchCommand = (
   global: GlobalFlags & { guild?: string }
 ): SearchArgs | HelpArgs => {
   const guildId = global.guild;
-  if (!(global.help || guildId)) {
-    return exitWithError(
-      "Missing required --guild/-g (guildId) for search command",
-      "search"
-    );
-  }
-
-  if (global.help && !guildId) {
+  if (global.help) {
     return parseWithError<HelpArgs>(
       {
         command: "help",
@@ -329,6 +322,13 @@ const parseSearchCommand = (
         version: global.version,
         token: global.token,
       },
+      "search"
+    );
+  }
+
+  if (!guildId) {
+    return exitWithError(
+      "Missing required --guild/-g (guildId) for search command",
       "search"
     );
   }
@@ -623,6 +623,12 @@ export const parseArgs = (args: string[]): ParsedArgs => {
   const subcommand = remaining[0];
 
   if (!subcommand) {
+    if (global.help) {
+      return parseWithError<ParsedArgs>(
+        { command: "help", ...global },
+        "interactive"
+      );
+    }
     return parseWithError<ParsedArgs>(
       { command: "interactive", ...global },
       "interactive"

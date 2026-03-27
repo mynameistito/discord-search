@@ -67,12 +67,27 @@ bun run index.ts --client-id 123456789
 bun run index.ts --help
 ```
 
+> [!NOTE>
+> **Current Implementation Status**
+> 
+> - `discord-search --help`: Shows help message ✓
+> - `discord-search --version`: Shows version number ✓
+> - Interactive mode: Not yet implemented (see `src/index.ts`)
+> - Search command: Not yet implemented (see `src/index.ts`)
+> - Preset command: Not yet implemented (see `src/index.ts`)
+> - Settings command: Not yet implemented (see `src/index.ts`)
+>
+> Refer to `src/index.ts` for the current implementation status of each command.
+
 Interactive mode
 The CLI guides you through setting up searches:
 1. Choose "New search" to start
 2. Enter your Guild ID (server ID)
 3. Optionally filter by content, author, mentions, or content types
 4. Browse results or export them
+
+> [!WARNING]
+> Interactive mode and all subcommands (search, preset, settings) are currently unimplemented. Running these will display an error message and exit with code 1. Only `--help` and `--version` are functional in this release.
 
 **Search filters**
 - Content text search

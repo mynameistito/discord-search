@@ -205,7 +205,7 @@ export const SearchParamsSchema = z.object({
   sortBy: z.enum(["timestamp", "relevance"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   offset: z.number().int().min(0).max(MAX_OFFSET).optional(),
-  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+  limit: z.number().int().min(1).optional(),
 });
 
 // Inferred types

@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 export const APP_DIR = join(homedir(), ".discord-search");
 export const SETTINGS_FILE = join(APP_DIR, "settings.json");
+export const PRESETS_FILE = join(APP_DIR, ".discord-search-presets.json");
 export const OUTPUT_DIR = join(APP_DIR, "output");
 
 const chmodSafe = async (path: string, mode: number): Promise<void> => {

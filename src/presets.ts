@@ -1,15 +1,19 @@
 import { Result } from "better-result";
-import type { SearchParams } from "@/discord/schemas.ts";
-import { ExportError } from "@/errors.ts";
+import { z } from "zod";
+import { SearchParamsSchema } from "@/discord/schemas.ts";
+import { PresetError } from "@/errors.ts";
+import { PRESETS_FILE } from "@/paths.ts";
 
-const PRESETS_FILE = ".discord-search-presets.json";
+const PresetSchema = z.object({
+  name: z.string(),
+  params: SearchParamsSchema,
+});
 
-export type Preset = {
-  name: string;
-  params: SearchParams;
-};
+const PresetsArraySchema = z.array(PresetSchema);
 
-export const loadPresets = async (): Promise<Result<Preset[], ExportError>> => {
+export type Preset = z.infer<typeof PresetSchema>;
+
+export const loadPresets = async (): Promise<Result<Preset[], PresetError>> => {
   return await Result.tryPromise({
     try: async () => {
       const file = Bun.file(PRESETS_FILE);
@@ -18,10 +22,11 @@ export const loadPresets = async (): Promise<Result<Preset[], ExportError>> => {
         return [];
       }
       const text = await file.text();
-      return JSON.parse(text) as Preset[];
+      const parsed = JSON.parse(text);
+      return PresetsArraySchema.parse(parsed);
     },
     catch: (cause) =>
-      new ExportError({
+      new PresetError({
         message: `Failed to load presets: ${cause instanceof Error ? cause.message : String(cause)}`,
         cause,
       }),
@@ -30,14 +35,16 @@ export const loadPresets = async (): Promise<Result<Preset[], ExportError>> => {
 
 export const savePreset = async (
   name: string,
-  params: SearchParams
-): Promise<Result<void, ExportError>> => {
+  params: z.infer<typeof SearchParamsSchema>
+): Promise<Result<void, PresetError>> => {
   return await Result.tryPromise({
     try: async () => {
       const presetsResult = await loadPresets();
-      const presets = presetsResult.isOk() ? presetsResult.value : [];
+      if (!presetsResult.isOk()) {
+        throw presetsResult.error;
+      }
+      const presets = presetsResult.value;
 
-      // Replace existing preset with same name or add new
       const index = presets.findIndex((p) => p.name === name);
       if (index >= 0) {
         presets[index] = { name, params };
@@ -48,7 +55,7 @@ export const savePreset = async (
       await Bun.write(PRESETS_FILE, JSON.stringify(presets, null, 2));
     },
     catch: (cause) =>
-      new ExportError({
+      new PresetError({
         message: `Failed to save preset: ${cause instanceof Error ? cause.message : String(cause)}`,
         cause,
       }),
@@ -57,16 +64,19 @@ export const savePreset = async (
 
 export const deletePreset = async (
   name: string
-): Promise<Result<void, ExportError>> => {
+): Promise<Result<void, PresetError>> => {
   return await Result.tryPromise({
     try: async () => {
       const presetsResult = await loadPresets();
-      const presets = presetsResult.isOk() ? presetsResult.value : [];
+      if (!presetsResult.isOk()) {
+        throw presetsResult.error;
+      }
+      const presets = presetsResult.value;
       const filtered = presets.filter((p) => p.name !== name);
       await Bun.write(PRESETS_FILE, JSON.stringify(filtered, null, 2));
     },
     catch: (cause) =>
-      new ExportError({
+      new PresetError({
         message: `Failed to delete preset: ${cause instanceof Error ? cause.message : String(cause)}`,
         cause,
       }),

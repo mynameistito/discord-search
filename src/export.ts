@@ -3,7 +3,12 @@ import type { CollatedData } from "@/collate.ts";
 import { ExportError } from "@/errors.ts";
 
 const escapeCsvField = (value: string): string => {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+  if (
+    value.includes(",") ||
+    value.includes('"') ||
+    value.includes("\n") ||
+    value.includes("\r")
+  ) {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;

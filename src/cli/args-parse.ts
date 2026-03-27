@@ -333,6 +333,8 @@ const parseSearchCommand = (
         help: global.help,
         version: true,
         token: global.token,
+        params: {},
+        json: false,
       },
       "search"
     );

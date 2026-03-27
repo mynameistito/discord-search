@@ -10,6 +10,8 @@ import {
 import { parseCommaSeparated } from "@/cli/utils.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
+const INTEGER_REGEX = /^\d+$/;
+
 export const handleCancel = (value: unknown): void => {
   if (isCancel(value)) {
     cancel("Search cancelled.");
@@ -133,7 +135,8 @@ export const promptForSearchParams = async (
     message: "Max messages to fetch (leave empty for all):",
     placeholder: "e.g. 100",
     validate: (v) => {
-      if (v?.trim() && Number.isNaN(Number.parseInt(v.trim(), 10))) {
+      const trimmed = v?.trim();
+      if (trimmed && !INTEGER_REGEX.test(trimmed)) {
         return "Must be a number";
       }
     },
@@ -144,7 +147,8 @@ export const promptForSearchParams = async (
     message: "Offset / skip first N results (leave empty for 0):",
     placeholder: "e.g. 50",
     validate: (v) => {
-      if (v?.trim() && Number.isNaN(Number.parseInt(v.trim(), 10))) {
+      const trimmed = v?.trim();
+      if (trimmed && !INTEGER_REGEX.test(trimmed)) {
         return "Must be a number";
       }
     },

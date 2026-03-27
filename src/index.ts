@@ -21,36 +21,42 @@ const run = () => {
 
   if (parsed.version) {
     printVersion();
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (parsed.command === "help") {
     printHelp(parsed);
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   if (parsed.command === "interactive") {
     process.stderr.write(
       "Interactive mode is not yet implemented. Use 'discord-search search --help' for CLI usage.\n"
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   if (parsed.command === "search") {
     process.stderr.write("Search command execution is not yet implemented.\n");
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   if (parsed.command === "preset") {
     process.stderr.write("Preset command execution is not yet implemented.\n");
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   if (parsed.command === "settings") {
     process.stderr.write(
       "Settings command execution is not yet implemented.\n"
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 };
 

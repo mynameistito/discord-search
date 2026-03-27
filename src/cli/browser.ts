@@ -106,8 +106,12 @@ const handleRenderError = (
   reject: (reason?: unknown) => void,
   cleanup: () => void
 ): void => {
+  try {
+    cleanup();
+  } catch {
+    // Swallow cleanup errors to preserve original error
+  }
   reject(err);
-  cleanup();
 };
 
 const handleQuit = (
@@ -157,6 +161,10 @@ export const browseMessages = (messages: Message[]): Promise<void> => {
 
     const state = { index: 0, viewMode: "preview" as const };
 
+    let cleanup: () => void = () => {
+      // No-op initially, replaced by actual cleanup after first render
+    };
+
     const render = () => {
       const msg = messages[state.index];
       if (!msg) {
@@ -176,7 +184,7 @@ export const browseMessages = (messages: Message[]): Promise<void> => {
       return;
     }
 
-    const cleanup = createKeyListener((key) => {
+    cleanup = createKeyListener((key) => {
       if (key === "q" || key === "\x1b") {
         handleQuit(cleanup, resolve, reject);
         return;

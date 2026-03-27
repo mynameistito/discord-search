@@ -197,7 +197,9 @@ const fetchPage = async (
     );
   }
 
-  state.allMessages.push(...pageMessages);
+  for (const msg of pageMessages) {
+    state.allMessages.push(msg);
+  }
   onPage?.(pageMessages);
   onProgress?.({
     fetched: state.allMessages.length,

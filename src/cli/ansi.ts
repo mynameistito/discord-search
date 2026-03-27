@@ -1,4 +1,5 @@
-export const ANSI_CLEAR_SCREEN = "\x1b[2J\x1b[H";
+export const ANSI_CLEAR_SCREEN = "\x1b[2J";
+export const ANSI_CURSOR_HOME = "\x1b[H";
 export const ANSI_BOLD = "\x1b[1m";
 export const ANSI_DIM = "\x1b[2m";
 export const ANSI_RESET = "\x1b[0m";

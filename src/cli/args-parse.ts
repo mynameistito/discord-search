@@ -365,8 +365,12 @@ const parsePresetRunAction = (
       command: "preset",
       action: "run",
       name,
-      ...flags,
-      ...global,
+      export: flags.export,
+      outputDir: flags.outputDir,
+      json: flags.json,
+      help: global.help,
+      version: global.version,
+      token: global.token,
     },
     "preset"
   );
@@ -377,28 +381,19 @@ const parsePresetRunAllAction = (
   global: GlobalFlags
 ): PresetRunAllArgs => {
   const restArgs = remaining.slice(2);
+  const flags = parseOutputFlags(restArgs, "preset");
   const names: string[] = [];
   let all = false;
 
-  for (let i = 0; i < restArgs.length; i++) {
-    const arg = restArgs[i] ?? "";
-
+  for (const arg of flags.leftovers) {
     if (arg === "--all") {
       all = true;
-    } else if (arg === "--json") {
-      // handled below via parseOutputFlags
-    } else if (arg === "--export") {
-      i++; // skip the value
-    } else if (arg === "--output-dir") {
-      i++; // skip the value
     } else if (arg.startsWith("-")) {
       exitWithError(`Unknown flag: "${arg}"`, "preset run-all");
     } else {
       names.push(arg);
     }
   }
-
-  const flags = parseOutputFlags(restArgs, "preset");
 
   if (!all && names.length === 0) {
     exitWithError("You must pass --all or at least one preset name", "preset");
@@ -413,11 +408,20 @@ const parsePresetRunAllAction = (
       export: flags.export,
       outputDir: flags.outputDir,
       json: flags.json,
-      ...global,
+      help: global.help,
+      version: global.version,
+      token: global.token,
     },
     "preset"
   );
 };
+
+const DISALLOWED_PRESET_SAVE_FLAGS = new Set([
+  "--export",
+  "--output-dir",
+  "--json",
+  "--save-preset",
+]);
 
 const parsePresetSaveAction = (
   remaining: string[],
@@ -433,14 +437,25 @@ const parsePresetSaveAction = (
       "preset"
     );
   }
-  const parsed = parseSearchFlags(remaining.slice(3), global.guild, "preset");
+  const restArgs = remaining.slice(3);
+  for (const arg of restArgs) {
+    if (DISALLOWED_PRESET_SAVE_FLAGS.has(arg)) {
+      return exitWithError(
+        `Flag ${arg} is not valid for 'preset save'. Only search parameter flags are allowed.`,
+        "preset"
+      );
+    }
+  }
+  const parsed = parseSearchFlags(restArgs, global.guild, "preset");
   return parseWithError<PresetSaveArgs>(
     {
       command: "preset",
       action: "save",
       name,
       params: parsed.params,
-      ...global,
+      help: global.help,
+      version: global.version,
+      token: global.token,
     },
     "preset"
   );
@@ -471,7 +486,9 @@ const parsePresetCommand = (
       {
         command: "preset",
         action: "list",
-        ...global,
+        help: global.help,
+        version: global.version,
+        token: global.token,
       },
       "preset"
     );
@@ -503,7 +520,9 @@ const parsePresetCommand = (
         command: "preset",
         action: "delete",
         name,
-        ...global,
+        help: global.help,
+        version: global.version,
+        token: global.token,
       },
       "preset"
     );
@@ -540,7 +559,9 @@ const parseSettingsCommand = (
       {
         command: "settings",
         action: "show",
-        ...global,
+        help: global.help,
+        version: global.version,
+        token: global.token,
       },
       "settings"
     );
@@ -569,7 +590,9 @@ const parseSettingsCommand = (
         action: "set",
         key,
         value,
-        ...global,
+        help: global.help,
+        version: global.version,
+        token: global.token,
       },
       "settings"
     );

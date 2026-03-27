@@ -327,14 +327,13 @@ const parseSearchCommand = (
   }
 
   if (global.version) {
-    return parseWithError<SearchArgs>(
+    return parseWithError<HelpArgs>(
       {
-        command: "search",
+        command: "help",
+        targetCommand: "search",
         help: global.help,
         version: true,
         token: global.token,
-        params: {},
-        json: false,
       },
       "search"
     );

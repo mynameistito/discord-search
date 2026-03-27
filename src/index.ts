@@ -3,8 +3,9 @@
 import { HELP_TEXT, SUBCOMMAND_HELP } from "@/cli/args-help.ts";
 import { parseArgs } from "@/cli/args-parse.ts";
 import type { ParsedArgs } from "@/cli/args-types.ts";
+import pkg from "../package.json";
 
-const VERSION = "0.0.0";
+const VERSION = pkg.version;
 
 const printHelp = (parsed: ParsedArgs & { command: "help" }) => {
   const target = parsed.targetCommand;

@@ -11,13 +11,14 @@ import { parseCommaSeparated } from "@/cli/utils.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
 const INTEGER_REGEX = /^\d+$/;
+const SNOWFLAKE_REGEX = /^\d{17,20}$/;
 
-export const handleCancel = (value: unknown): void => {
+export function handleCancel<T>(value: T | symbol): asserts value is T {
   if (isCancel(value)) {
     cancel("Search cancelled.");
     process.exit(0);
   }
-};
+}
 
 export const promptForToken = async (): Promise<string> => {
   const token = await password({
@@ -35,8 +36,12 @@ export const promptForSearchParams = async (
     message: "Guild (Server) ID:",
     initialValue: defaultGuildId,
     validate: (v) => {
-      if (!v?.trim()) {
+      const trimmed = v?.trim();
+      if (!trimmed) {
         return "Guild ID is required";
+      }
+      if (!SNOWFLAKE_REGEX.test(trimmed)) {
+        return "Guild ID must be a 17–20 digit Discord snowflake";
       }
     },
   });

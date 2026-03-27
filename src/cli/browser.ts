@@ -165,22 +165,22 @@ export const browseMessages = (messages: Message[]): Promise<void> => {
       // No-op initially, replaced by actual cleanup after first render
     };
 
-    const render = () => {
+    const render = (): boolean => {
       const msg = messages[state.index];
       if (!msg) {
-        return;
+        return true;
       }
       try {
         renderMessageView(msg, state.index, messages.length, state.viewMode);
+        return true;
       } catch (err) {
         handleRenderError(err, reject, cleanup);
+        return false;
       }
     };
 
-    try {
-      render();
-    } catch (err) {
-      reject(err);
+    const renderSucceeded = render();
+    if (!renderSucceeded) {
       return;
     }
 
@@ -191,12 +191,7 @@ export const browseMessages = (messages: Message[]): Promise<void> => {
       }
 
       navigate(key, state, messages.length);
-
-      try {
-        render();
-      } catch (err) {
-        handleRenderError(err, reject, cleanup);
-      }
+      render();
     });
   });
 };

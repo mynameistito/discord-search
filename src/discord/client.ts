@@ -65,17 +65,19 @@ const updateRateLimitState = (
   headers: Headers,
   bucketKey: BucketKey,
   computedKey: BucketKey
-): void => {
+): BucketKey => {
   const state = getBucketState(bucketKey);
   const remaining = headers.get("X-RateLimit-Remaining");
   const resetAfter = headers.get("X-RateLimit-Reset-After");
   const bucket = headers.get("X-RateLimit-Bucket");
 
+  let activeBucketKey = bucketKey;
   if (bucket !== null && `discord:${bucket}` !== bucketKey) {
     const discordBucketKey = `discord:${bucket}`;
     rateLimitBuckets.delete(bucketKey);
     rateLimitBuckets.set(discordBucketKey, state);
     bucketKeyMap.set(computedKey, discordBucketKey);
+    activeBucketKey = discordBucketKey;
   }
 
   if (remaining !== null) {
@@ -85,6 +87,7 @@ const updateRateLimitState = (
     state.resetAfterMs = Number.parseFloat(resetAfter) * 1000;
   }
   state.lastRequestTime = Date.now();
+  return activeBucketKey;
 };
 
 const waitForRateLimit = async (bucketKey: BucketKey): Promise<void> => {
@@ -221,11 +224,12 @@ const handle202 = async <T>(
   schema: z.ZodType<T>,
   maxRetries: number,
   maxRetries429: number,
-  bucketKey: BucketKey,
+  initialBucketKey: BucketKey,
   computedKey: BucketKey,
   rateLimitCounter: RetryCounter
 ): Promise<Result<T, DiscordFetchError>> => {
   let retryAfter = await parseRetryAfterFrom202(response);
+  let bucketKey = initialBucketKey;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     await sleep(retryAfter * 1000);
@@ -237,7 +241,11 @@ const handle202 = async <T>(
     }
 
     const retryResponse = retryResult.value;
-    updateRateLimitState(retryResponse.headers, bucketKey, computedKey);
+    bucketKey = updateRateLimitState(
+      retryResponse.headers,
+      bucketKey,
+      computedKey
+    );
 
     if (retryResponse.status === 429) {
       const rateLimitResult = await handle429(
@@ -331,7 +339,7 @@ export const discordFetch = async <T>(
 ): Promise<Result<T, DiscordFetchError>> => {
   const url = `${DISCORD_API_BASE}${path}`;
   const computedKey = computeBucketKey(path, token);
-  const bucketKey = bucketKeyMap.get(computedKey) ?? computedKey;
+  let bucketKey = bucketKeyMap.get(computedKey) ?? computedKey;
   const rateLimitCounter: RetryCounter = { value: 0 };
 
   for (; rateLimitCounter.value <= maxRetries429; rateLimitCounter.value++) {
@@ -343,7 +351,7 @@ export const discordFetch = async <T>(
     }
 
     const response = fetchResult.value;
-    updateRateLimitState(response.headers, bucketKey, computedKey);
+    bucketKey = updateRateLimitState(response.headers, bucketKey, computedKey);
 
     if (response.status === 429) {
       const result = await handle429(

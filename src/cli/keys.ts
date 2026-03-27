@@ -31,7 +31,7 @@ export const createKeyListener = (onKey: KeyHandler): (() => void) => {
     if (!wasRaw) {
       process.stdin.setRawMode(false);
     }
-    if (previousEncoding) {
+    if (previousEncoding !== null) {
       process.stdin.setEncoding(previousEncoding);
     }
     process.stdin.pause();

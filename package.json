@@ -33,6 +33,7 @@
     "dev": "tsdown --watch",
     "check": "ultracite check",
     "fix": "ultracite fix",
+    "test": "bun test",
     "prepare": "lefthook install",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run typecheck && bun run check && bun run build",

@@ -4,6 +4,8 @@ import { HELP_TEXT, SUBCOMMAND_HELP } from "@/cli/args-help.ts";
 import { parseArgs } from "@/cli/args-parse.ts";
 import type { ParsedArgs } from "@/cli/args-types.ts";
 
+const VERSION = "0.0.0";
+
 const printHelp = (parsed: ParsedArgs & { command: "help" }) => {
   const target = parsed.targetCommand;
   const helpText = target ? SUBCOMMAND_HELP[target] : HELP_TEXT;
@@ -11,7 +13,7 @@ const printHelp = (parsed: ParsedArgs & { command: "help" }) => {
 };
 
 const printVersion = () => {
-  process.stdout.write("discord-search 0.0.0\n");
+  process.stdout.write(`discord-search ${VERSION}\n`);
 };
 
 const run = () => {

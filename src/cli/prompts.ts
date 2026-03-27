@@ -7,6 +7,7 @@ import {
   select,
   text,
 } from "@clack/prompts";
+import { parseCommaSeparated } from "@/cli/utils.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
 export const handleCancel = (value: unknown): void => {
@@ -14,17 +15,6 @@ export const handleCancel = (value: unknown): void => {
     cancel("Search cancelled.");
     process.exit(0);
   }
-};
-
-export const parseCommaSeparated = (value: string): string[] | undefined => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  return trimmed
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 };
 
 export const promptForToken = async (): Promise<string> => {
@@ -68,18 +58,22 @@ export const promptForSearchParams = async (
   });
   handleCancel(filterByAuthorType);
 
-  let authorType: string | undefined;
+  let authorType: string[] | undefined;
   if (filterByAuthorType) {
-    const selected = await select({
+    const selected = await multiselect({
       message: "Author type:",
       options: [
-        { value: "user", label: "Users only" },
-        { value: "bot", label: "Bots only" },
-        { value: "webhook", label: "Webhooks only" },
+        { value: "user", label: "Users" },
+        { value: "bot", label: "Bots" },
+        { value: "webhook", label: "Webhooks" },
       ],
+      required: false,
     });
     handleCancel(selected);
-    authorType = selected as string;
+    const selectedArray = selected as string[] | undefined;
+    if (selectedArray && selectedArray.length > 0) {
+      authorType = selectedArray as ("user" | "bot" | "webhook")[];
+    }
   }
 
   const mentionIds = await text({
@@ -170,21 +164,21 @@ export const promptForSearchParams = async (
   }
 
   const authorIdList = parseCommaSeparated(authorIds as string);
-  if (authorIdList) {
+  if (authorIdList && authorIdList.length > 0) {
     params.authorId = authorIdList;
   }
 
   if (authorType) {
-    params.authorType = [authorType as "user" | "bot" | "webhook"];
+    params.authorType = authorType as ("user" | "bot" | "webhook")[];
   }
 
   const mentionList = parseCommaSeparated(mentionIds as string);
-  if (mentionList) {
+  if (mentionList && mentionList.length > 0) {
     params.mentions = mentionList;
   }
 
   const channelList = parseCommaSeparated(channelIds as string);
-  if (channelList) {
+  if (channelList && channelList.length > 0) {
     params.channelId = channelList;
   }
 

@@ -5,12 +5,9 @@ export const MAX_PAGE_SIZE = 25;
 
 const SNOWFLAKE_REGEX = /^\d{17,20}$/;
 
-const snowflakeSchema = z
-  .string()
-  .regex(SNOWFLAKE_REGEX, {
-    message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
-  })
-  .max(20, { message: "Discord ID exceeds maximum length of 20 characters" });
+const snowflakeSchema = z.string().regex(SNOWFLAKE_REGEX, {
+  message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+});
 
 const snowflakeArraySchema = z.array(snowflakeSchema);
 

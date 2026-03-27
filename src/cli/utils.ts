@@ -1,6 +1,10 @@
-/** Split a comma-separated string into trimmed, non-empty tokens. */
-export const parseCommaSeparated = (input: string): string[] =>
-  input
+export const parseCommaSeparated = (input: string): string[] | undefined => {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+};

@@ -1,5 +1,6 @@
 import {
   ANSI_CLEAR_SCREEN,
+  ANSI_CURSOR_HOME,
   ANSI_CYAN,
   ANSI_DIM,
   ANSI_RESET,
@@ -7,6 +8,18 @@ import {
 } from "@/cli/ansi.ts";
 import { createKeyListener } from "@/cli/keys.ts";
 import type { Message } from "@/discord/schemas.ts";
+
+const formatTimestamp = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
 
 const formatMessagePreview = (msg: Message): string => {
   const author = msg.author.bot
@@ -26,7 +39,16 @@ const formatMessagePreview = (msg: Message): string => {
     msg.content.length > 100
       ? `${msg.content.slice(0, 100)}...`
       : msg.content || "(no text content)";
-  return `${ANSI_DIM}${msg.timestamp}${ANSI_RESET} ${ANSI_CYAN}${author}${ANSI_RESET}: ${content}${suffix}`;
+  return `${ANSI_DIM}${formatTimestamp(msg.timestamp)}${ANSI_RESET} ${ANSI_CYAN}${author}${ANSI_RESET}: ${content}${suffix}`;
+};
+
+const truncate = (text: string, maxLen: number): string =>
+  text.length > maxLen ? `${text.slice(0, maxLen)}...` : text;
+
+const renderField = (field: { name: string; value: string }): void => {
+  const name = truncate(field.name, 40);
+  const value = truncate(field.value, 100);
+  process.stdout.write(`  ${ANSI_CYAN}${name}:${ANSI_RESET} ${value}\n`);
 };
 
 const renderEmbedPreview = (msg: Message): void => {
@@ -36,20 +58,16 @@ const renderEmbedPreview = (msg: Message): void => {
 
   for (const embed of msg.embeds) {
     if (embed.title) {
-      process.stdout.write(`  Embed: ${embed.title}\n`);
+      const title = truncate(embed.title, 80);
+      process.stdout.write(`  Embed: ${title}\n`);
     }
     if (embed.description) {
-      const desc =
-        embed.description.length > 200
-          ? `${embed.description.slice(0, 200)}...`
-          : embed.description;
+      const desc = truncate(embed.description, 200);
       process.stdout.write(`  ${ANSI_DIM}${desc}${ANSI_RESET}\n`);
     }
     if (embed.fields) {
       for (const field of embed.fields) {
-        process.stdout.write(
-          `  ${ANSI_CYAN}${field.name}:${ANSI_RESET} ${field.value}\n`
-        );
+        renderField(field);
       }
     }
     process.stdout.write("\n");
@@ -62,7 +80,7 @@ const renderMessageView = (
   total: number,
   viewMode: "preview" | "json"
 ): void => {
-  process.stdout.write(ANSI_CLEAR_SCREEN);
+  process.stdout.write(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
   process.stdout.write(
     `${ANSI_YELLOW}Message ${index + 1} of ${total}${ANSI_RESET}\n\n`
   );
@@ -75,48 +93,102 @@ const renderMessageView = (
   }
 
   process.stdout.write(
-    `\n${ANSI_DIM}[j/↓] next  [k/↑] prev  [v] toggle JSON  [q] back${ANSI_RESET}\n`
+    `\n${ANSI_DIM}[j/↓] next  [k/↑] prev  [v] toggle JSON  [q/Esc] back${ANSI_RESET}\n`
   );
 };
 
+const safeWrite = (text: string): void => {
+  process.stdout.write(text);
+};
+
+const handleRenderError = (
+  err: unknown,
+  reject: (reason?: unknown) => void,
+  cleanup: () => void
+): void => {
+  reject(err);
+  cleanup();
+};
+
+const handleQuit = (
+  cleanup: () => void,
+  resolve: () => void,
+  reject: (reason?: unknown) => void
+): void => {
+  try {
+    cleanup();
+    safeWrite(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
+    resolve();
+  } catch (err) {
+    reject(err);
+  }
+};
+
+const navigate = (
+  key: string,
+  state: { index: number; viewMode: "preview" | "json" },
+  total: number
+): void => {
+  if (key === "j" || key === "\x1b[B") {
+    state.index = Math.min(state.index + 1, total - 1);
+  } else if (key === "k" || key === "\x1b[A") {
+    state.index = Math.max(state.index - 1, 0);
+  } else if (key === "v") {
+    state.viewMode = state.viewMode === "preview" ? "json" : "preview";
+  }
+};
+
 export const browseMessages = (messages: Message[]): Promise<void> => {
-  return new Promise((resolve) => {
+  if (!process.stdin.isTTY) {
+    safeWrite("Interactive browsing requires a TTY terminal.\n");
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
     if (messages.length === 0) {
-      process.stdout.write(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
-      resolve();
+      try {
+        safeWrite(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
       return;
     }
 
-    let index = 0;
-    let viewMode: "preview" | "json" = "preview";
+    const state = { index: 0, viewMode: "preview" as const };
 
     const render = () => {
-      const msg = messages[index];
+      const msg = messages[state.index];
       if (!msg) {
         return;
       }
-      renderMessageView(msg, index, messages.length, viewMode);
+      try {
+        renderMessageView(msg, state.index, messages.length, state.viewMode);
+      } catch (err) {
+        handleRenderError(err, reject, cleanup);
+      }
     };
 
-    render();
+    try {
+      render();
+    } catch (err) {
+      reject(err);
+      return;
+    }
 
     const cleanup = createKeyListener((key) => {
       if (key === "q" || key === "\x1b") {
-        cleanup();
-        process.stdout.write(ANSI_CLEAR_SCREEN);
-        resolve();
+        handleQuit(cleanup, resolve, reject);
         return;
       }
 
-      if (key === "j" || key === "\x1b[B") {
-        index = Math.min(index + 1, messages.length - 1);
-      } else if (key === "k" || key === "\x1b[A") {
-        index = Math.max(index - 1, 0);
-      } else if (key === "v") {
-        viewMode = viewMode === "preview" ? "json" : "preview";
-      }
+      navigate(key, state, messages.length);
 
-      render();
+      try {
+        render();
+      } catch (err) {
+        handleRenderError(err, reject, cleanup);
+      }
     });
   });
 };

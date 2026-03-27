@@ -326,6 +326,18 @@ const parseSearchCommand = (
     );
   }
 
+  if (global.version) {
+    return parseWithError<SearchArgs>(
+      {
+        command: "search",
+        help: global.help,
+        version: true,
+        token: global.token,
+      },
+      "search"
+    );
+  }
+
   if (!guildId) {
     return exitWithError(
       "Missing required --guild/-g (guildId) for search command",
@@ -478,6 +490,19 @@ const parsePresetCommand = (
     );
   }
 
+  if (global.version) {
+    return parseWithError<ParsedArgs>(
+      {
+        command: "preset",
+        action: "list",
+        help: global.help,
+        version: true,
+        token: global.token,
+      },
+      "preset"
+    );
+  }
+
   const action = remaining[1];
 
   if (action === "list") {
@@ -545,6 +570,19 @@ const parseSettingsCommand = (
         targetCommand: "settings",
         help: true,
         version: global.version,
+        token: global.token,
+      },
+      "settings"
+    );
+  }
+
+  if (global.version) {
+    return parseWithError<ParsedArgs>(
+      {
+        command: "settings",
+        action: "show",
+        help: global.help,
+        version: true,
         token: global.token,
       },
       "settings"

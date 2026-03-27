@@ -67,9 +67,9 @@ bun run index.ts --client-id 123456789
 bun run index.ts --help
 ```
 
-> [!NOTE>
+> [!NOTE]
 > **Current Implementation Status**
-> 
+>
 > - `discord-search --help`: Shows help message ✓
 > - `discord-search --version`: Shows version number ✓
 > - Interactive mode: Not yet implemented (see `src/index.ts`)

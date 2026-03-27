@@ -9,8 +9,8 @@ import {
   type PresetSaveArgs,
   type SearchArgs,
 } from "@/cli/args-types.ts";
-import { parseCommaSeparated } from "@/cli/utils.ts";
-import type { SearchParams } from "@/discord/schemas.ts";
+import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
+import { type SearchParams, SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
 
 const parseWithError = <T>(data: unknown, subcommand: string): T => {
   const result = ParsedArgsSchema.safeParse(data);
@@ -106,8 +106,6 @@ const BOOLEAN_FLAGS: Record<string, keyof SearchParams> = {
   "--pinned": "pinned",
   "--mention-everyone": "mentionEveryone",
 };
-
-const INTEGER_REGEX = /^\d+$/;
 
 type SearchFlagsResult = {
   params: Omit<SearchParams, "guildId"> & { guildId?: string };
@@ -313,14 +311,7 @@ const parseSearchCommand = (
   global: GlobalFlags & { guild?: string }
 ): SearchArgs | HelpArgs => {
   const guildId = global.guild;
-  if (!(global.help || guildId)) {
-    return exitWithError(
-      "Missing required --guild/-g (guildId) for search command",
-      "search"
-    );
-  }
-
-  if (global.help && !guildId) {
+  if (global.help) {
     return parseWithError<HelpArgs>(
       {
         command: "help",
@@ -329,6 +320,26 @@ const parseSearchCommand = (
         version: global.version,
         token: global.token,
       },
+      "search"
+    );
+  }
+
+  if (global.version) {
+    return parseWithError<HelpArgs>(
+      {
+        command: "help",
+        targetCommand: "search",
+        help: global.help,
+        version: true,
+        token: global.token,
+      },
+      "search"
+    );
+  }
+
+  if (!guildId) {
+    return exitWithError(
+      "Missing required --guild/-g (guildId) for search command",
       "search"
     );
   }
@@ -393,6 +404,13 @@ const parsePresetRunAllAction = (
     } else {
       names.push(arg);
     }
+  }
+
+  if (all && names.length > 0) {
+    exitWithError(
+      "Cannot specify both --all and named presets",
+      "preset run-all"
+    );
   }
 
   if (!all && names.length === 0) {
@@ -478,6 +496,19 @@ const parsePresetCommand = (
     );
   }
 
+  if (global.version) {
+    return parseWithError<ParsedArgs>(
+      {
+        command: "preset",
+        action: "list",
+        help: global.help,
+        version: true,
+        token: global.token,
+      },
+      "preset"
+    );
+  }
+
   const action = remaining[1];
 
   if (action === "list") {
@@ -551,6 +582,19 @@ const parseSettingsCommand = (
     );
   }
 
+  if (global.version) {
+    return parseWithError<ParsedArgs>(
+      {
+        command: "settings",
+        action: "show",
+        help: global.help,
+        version: true,
+        token: global.token,
+      },
+      "settings"
+    );
+  }
+
   const action = remaining[1];
 
   if (action === "show") {
@@ -581,6 +625,15 @@ const parseSettingsCommand = (
       return exitWithError(
         `Unknown settings key: "${key}". Valid keys: ${[...VALID_SETTINGS_KEYS].join(", ")}`,
         "settings"
+      );
+    }
+    if (
+      (key === "guild" || key === "client-id") &&
+      !SNOWFLAKE_REGEX.test(value)
+    ) {
+      return exitWithError(
+        `Invalid value for ${key}: must be a 17-20 digit snowflake ID`,
+        "settings set"
       );
     }
     checkNoLeftovers(remaining.slice(4), "settings set");
@@ -623,6 +676,12 @@ export const parseArgs = (args: string[]): ParsedArgs => {
   const subcommand = remaining[0];
 
   if (!subcommand) {
+    if (global.help) {
+      return parseWithError<ParsedArgs>(
+        { command: "help", ...global },
+        "interactive"
+      );
+    }
     return parseWithError<ParsedArgs>(
       { command: "interactive", ...global },
       "interactive"

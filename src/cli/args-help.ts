@@ -26,6 +26,8 @@ const GLOBAL_OPTIONS = section("GLOBAL OPTIONS", [
   opt("--help, -h", "Show this help message"),
   opt("--version, -v", "Show version number"),
   opt("--token, -t <token>", "Bot token (overrides DISCORD_BOT_TOKEN)"),
+  opt("--guild, -g <id>", "Default guild/server ID"),
+  opt("--client-id, -c <id>", "Bot client ID (for invite link)"),
 ]);
 
 const SEARCH_FILTERING = section("FILTERING", [

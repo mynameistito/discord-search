@@ -3,14 +3,11 @@ import { z } from "zod";
 export const MAX_OFFSET = 9975;
 export const MAX_PAGE_SIZE = 25;
 
-const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+export const SNOWFLAKE_REGEX = /^\d{17,20}$/;
 
-const snowflakeSchema = z
-  .string()
-  .regex(SNOWFLAKE_REGEX, {
-    message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
-  })
-  .max(20, { message: "Discord ID exceeds maximum length of 20 characters" });
+const snowflakeSchema = z.string().regex(SNOWFLAKE_REGEX, {
+  message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+});
 
 const snowflakeArraySchema = z.array(snowflakeSchema);
 
@@ -205,7 +202,7 @@ export const SearchParamsSchema = z.object({
   sortBy: z.enum(["timestamp", "relevance"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   offset: z.number().int().min(0).max(MAX_OFFSET).optional(),
-  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+  limit: z.number().int().min(1).optional(),
 });
 
 // Inferred types

@@ -165,6 +165,9 @@ const fetchPage = async (
     ? Math.min(params.limit, MAX_PAGE_SIZE)
     : MAX_PAGE_SIZE;
 
+  // Only capture totalResults from the first (unfiltered) response.
+  // Subsequent partitions with max_id return a smaller total_results
+  // scoped to the filtered range, which would cause early termination.
   if (state.totalResults === 0) {
     state.totalResults = maxMessages
       ? Math.min(data.total_results, maxMessages)
@@ -194,7 +197,9 @@ const fetchPage = async (
     );
   }
 
-  Array.prototype.push.apply(state.allMessages, pageMessages);
+  for (const msg of pageMessages) {
+    state.allMessages.push(msg);
+  }
   onPage?.(pageMessages);
   onProgress?.({
     fetched: state.allMessages.length,

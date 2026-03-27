@@ -1,0 +1,207 @@
+import {
+  cancel,
+  confirm,
+  isCancel,
+  multiselect,
+  password,
+  select,
+  text,
+} from "@clack/prompts";
+import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
+import { type SearchParams, SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
+
+export function handleCancel<T>(value: T | symbol): asserts value is T {
+  if (isCancel(value)) {
+    cancel("Search cancelled.");
+    process.exit(0);
+  }
+}
+
+export const promptForToken = async (): Promise<string> => {
+  const token = await password({
+    message: "Enter your Discord Bot Token:",
+    validate: (v) => (v?.trim() ? undefined : "Token cannot be empty"),
+  });
+  handleCancel(token);
+  return token as string;
+};
+
+export const promptForSearchParams = async (
+  defaultGuildId?: string
+): Promise<SearchParams> => {
+  const guildId = await text({
+    message: "Guild (Server) ID:",
+    initialValue: defaultGuildId,
+    validate: (v) => {
+      const trimmed = v?.trim();
+      if (!trimmed) {
+        return "Guild ID is required";
+      }
+      if (!SNOWFLAKE_REGEX.test(trimmed)) {
+        return "Guild ID must be a 17–20 digit Discord snowflake";
+      }
+    },
+  });
+  handleCancel(guildId);
+
+  const content = await text({
+    message: "Content filter (leave empty for all):",
+    placeholder: "search text...",
+  });
+  handleCancel(content);
+
+  const authorIds = await text({
+    message: "Author IDs (comma-separated, leave empty for all):",
+    placeholder: "123456789,987654321",
+  });
+  handleCancel(authorIds);
+
+  const filterByAuthorType = await confirm({
+    message: "Filter by author type?",
+    initialValue: false,
+  });
+  handleCancel(filterByAuthorType);
+
+  let authorType: string[] | undefined;
+  if (filterByAuthorType) {
+    const selected = await multiselect({
+      message: "Author type:",
+      options: [
+        { value: "user", label: "Users" },
+        { value: "bot", label: "Bots" },
+        { value: "webhook", label: "Webhooks" },
+      ],
+      required: false,
+    });
+    handleCancel(selected);
+    const selectedArray = selected as string[] | undefined;
+    if (selectedArray && selectedArray.length > 0) {
+      authorType = selectedArray as ("user" | "bot" | "webhook")[];
+    }
+  }
+
+  const mentionIds = await text({
+    message: "Mentions user IDs (comma-separated, leave empty to skip):",
+    placeholder: "123456789",
+  });
+  handleCancel(mentionIds);
+
+  const channelIds = await text({
+    message: "Channel IDs (comma-separated, leave empty for all):",
+    placeholder: "123456789,987654321",
+  });
+  handleCancel(channelIds);
+
+  const hasFilter = await multiselect({
+    message: "Has content type (select none to skip):",
+    options: [
+      { value: "embed", label: "Embed" },
+      { value: "image", label: "Image" },
+      { value: "video", label: "Video" },
+      { value: "file", label: "File" },
+      { value: "link", label: "Link" },
+      { value: "sticker", label: "Sticker" },
+      { value: "sound", label: "Sound" },
+      { value: "poll", label: "Poll" },
+      { value: "snapshot", label: "Snapshot" },
+    ],
+    required: false,
+  });
+  handleCancel(hasFilter);
+
+  const sortBy = await select({
+    message: "Sort by:",
+    options: [
+      { value: "timestamp", label: "Timestamp" },
+      { value: "relevance", label: "Relevance" },
+    ],
+  });
+  handleCancel(sortBy);
+
+  const sortOrder = await select({
+    message: "Sort order:",
+    options: [
+      { value: "desc", label: "Newest first" },
+      { value: "asc", label: "Oldest first" },
+    ],
+  });
+  handleCancel(sortOrder);
+
+  const includeNsfw = await confirm({
+    message: "Include NSFW channels?",
+    initialValue: false,
+  });
+  handleCancel(includeNsfw);
+
+  const limitInput = await text({
+    message: "Max messages to fetch (leave empty for all):",
+    placeholder: "e.g. 100",
+    validate: (v) => {
+      const trimmed = v?.trim();
+      if (trimmed && !INTEGER_REGEX.test(trimmed)) {
+        return "Must be a number";
+      }
+    },
+  });
+  handleCancel(limitInput);
+
+  const offsetInput = await text({
+    message: "Offset / skip first N results (leave empty for 0):",
+    placeholder: "e.g. 50",
+    validate: (v) => {
+      const trimmed = v?.trim();
+      if (trimmed && !INTEGER_REGEX.test(trimmed)) {
+        return "Must be a number";
+      }
+    },
+  });
+  handleCancel(offsetInput);
+
+  const params: SearchParams = {
+    guildId: (guildId as string).trim(),
+    sortBy: sortBy as "timestamp" | "relevance",
+    sortOrder: sortOrder as "asc" | "desc",
+    includeNsfw: includeNsfw as boolean,
+  };
+
+  const contentStr = (content as string).trim();
+  if (contentStr) {
+    params.content = contentStr;
+  }
+
+  const authorIdList = parseCommaSeparated(authorIds as string);
+  if (authorIdList && authorIdList.length > 0) {
+    params.authorId = authorIdList;
+  }
+
+  if (authorType) {
+    params.authorType = authorType as ("user" | "bot" | "webhook")[];
+  }
+
+  const mentionList = parseCommaSeparated(mentionIds as string);
+  if (mentionList && mentionList.length > 0) {
+    params.mentions = mentionList;
+  }
+
+  const channelList = parseCommaSeparated(channelIds as string);
+  if (channelList && channelList.length > 0) {
+    params.channelId = channelList;
+  }
+
+  const hasFilterArr = hasFilter as string[];
+  if (hasFilterArr.length > 0) {
+    params.has = hasFilterArr as SearchParams["has"];
+  }
+
+  const limitStr = (limitInput as string).trim();
+  if (limitStr) {
+    params.limit = Number.parseInt(limitStr, 10);
+  }
+
+  const offsetStr = (offsetInput as string).trim();
+  if (offsetStr) {
+    params.offset = Number.parseInt(offsetStr, 10);
+  }
+
+  return params;
+};

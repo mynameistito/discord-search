@@ -9,12 +9,11 @@ import {
 } from "@clack/prompts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
-export const handleCancel = (value: unknown): value is symbol => {
+export const handleCancel = (value: unknown): void => {
   if (isCancel(value)) {
     cancel("Search cancelled.");
     process.exit(0);
   }
-  return false;
 };
 
 export const parseCommaSeparated = (value: string): string[] | undefined => {
@@ -31,6 +30,7 @@ export const parseCommaSeparated = (value: string): string[] | undefined => {
 export const promptForToken = async (): Promise<string> => {
   const token = await password({
     message: "Enter your Discord Bot Token:",
+    validate: (v) => (v?.trim() ? undefined : "Token cannot be empty"),
   });
   handleCancel(token);
   return token as string;
@@ -62,16 +62,25 @@ export const promptForSearchParams = async (
   });
   handleCancel(authorIds);
 
-  const authorType = await select({
-    message: "Author type filter:",
-    options: [
-      { value: "none", label: "Any (no filter)" },
-      { value: "user", label: "Users only" },
-      { value: "bot", label: "Bots only" },
-      { value: "webhook", label: "Webhooks only" },
-    ],
+  const filterByAuthorType = await confirm({
+    message: "Filter by author type?",
+    initialValue: false,
   });
-  handleCancel(authorType);
+  handleCancel(filterByAuthorType);
+
+  let authorType: string | undefined;
+  if (filterByAuthorType) {
+    const selected = await select({
+      message: "Author type:",
+      options: [
+        { value: "user", label: "Users only" },
+        { value: "bot", label: "Bots only" },
+        { value: "webhook", label: "Webhooks only" },
+      ],
+    });
+    handleCancel(selected);
+    authorType = selected as string;
+  }
 
   const mentionIds = await text({
     message: "Mentions user IDs (comma-separated, leave empty to skip):",
@@ -165,7 +174,7 @@ export const promptForSearchParams = async (
     params.authorId = authorIdList;
   }
 
-  if (authorType !== "none") {
+  if (authorType) {
     params.authorType = [authorType as "user" | "bot" | "webhook"];
   }
 

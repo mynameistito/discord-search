@@ -82,6 +82,7 @@ const renderMessageView = (
 export const browseMessages = (messages: Message[]): Promise<void> => {
   return new Promise((resolve) => {
     if (messages.length === 0) {
+      process.stdout.write(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
       resolve();
       return;
     }

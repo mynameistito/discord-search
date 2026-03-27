@@ -25,6 +25,12 @@ type RateLimitState = {
 
 type BucketKey = string;
 
+/**
+ * Module-level rate limit state shared across all calls to discordFetch.
+ * Keyed per bucket (endpoint path + token hash), so different endpoints
+ * maintain independent rate limit tracking. Assumes sequential usage
+ * per bucket — concurrent requests to the same bucket may race.
+ */
 const rateLimitBuckets = new Map<BucketKey, RateLimitState>();
 const bucketKeyMap = new Map<BucketKey, BucketKey>();
 

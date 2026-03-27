@@ -165,11 +165,9 @@ const fetchPage = async (
     ? Math.min(params.limit, MAX_PAGE_SIZE)
     : MAX_PAGE_SIZE;
 
-  if (state.totalResults === 0) {
-    state.totalResults = maxMessages
-      ? Math.min(data.total_results, maxMessages)
-      : data.total_results;
-  }
+  state.totalResults = maxMessages
+    ? Math.min(data.total_results, maxMessages)
+    : data.total_results;
 
   let pageMessages = data.messages
     .map((group) => group[0])

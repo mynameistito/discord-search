@@ -32,3 +32,8 @@ export class ExportError extends TaggedError("ExportError")<{
   message: string;
   cause: unknown;
 }>() {}
+
+export class PresetError extends TaggedError("PresetError")<{
+  message: string;
+  cause: unknown;
+}>() {}

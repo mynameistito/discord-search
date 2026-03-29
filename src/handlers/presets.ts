@@ -54,7 +54,11 @@ export const handleManagePresets = async (): Promise<void> => {
 
   if (presetAction !== "__back__") {
     const name = presetAction as string;
-    await deletePreset(name);
+    const result = await deletePreset(name);
+    if (result.isErr()) {
+      log.error(`Failed to delete preset: ${result.error.message}`);
+      return;
+    }
     log.success(`Deleted preset: ${name}`);
   }
 };
@@ -108,8 +112,12 @@ export const resolveSearchParams = async (
     });
     handleCancel(presetName);
     const savedName = (presetName as string).trim();
-    await savePreset(savedName, params);
-    log.success(`Saved preset: ${savedName}`);
+    const result = await savePreset(savedName, params);
+    if (result.isErr()) {
+      log.error(`Failed to save preset: ${result.error.message}`);
+    } else {
+      log.success(`Saved preset: ${savedName}`);
+    }
   }
 
   return params;

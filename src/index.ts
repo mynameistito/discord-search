@@ -45,7 +45,8 @@ type ConfigResult = Awaited<ReturnType<typeof loadConfig>>;
 
 const handleMenuAction = async (
   action: string,
-  state: AppState
+  state: AppState,
+  token: string
 ): Promise<boolean> => {
   if (action === "exit") {
     return false;
@@ -57,7 +58,7 @@ const handleMenuAction = async (
   }
 
   if (action === "run-all") {
-    await handleRunAllPresets(state.token as string);
+    await handleRunAllPresets(token);
     return true;
   }
 
@@ -68,7 +69,7 @@ const handleMenuAction = async (
 
   const searchParams = await resolveSearchParams(action, state.defaultGuildId);
   if (searchParams) {
-    await executeSearch(searchParams, state.token as string);
+    await executeSearch(searchParams, token);
   }
 
   return true;
@@ -109,7 +110,11 @@ const runInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
     });
     handleCancel(action);
 
-    const shouldContinue = await handleMenuAction(action as string, state);
+    const shouldContinue = await handleMenuAction(
+      action as string,
+      state,
+      token
+    );
     if (!shouldContinue) {
       break;
     }
@@ -301,4 +306,9 @@ const main = async (): Promise<void> => {
   }
 };
 
-main();
+main().catch((err: unknown) => {
+  console.error(
+    err instanceof Error ? (err.stack ?? err.message) : String(err)
+  );
+  process.exit(1);
+});

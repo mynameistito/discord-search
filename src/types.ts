@@ -1,5 +1,5 @@
-import type { Config } from "@/config.ts";
-
 export type AppState = {
-  config: Config;
+  token: string | undefined;
+  clientId: string | undefined;
+  defaultGuildId: string | undefined;
 };

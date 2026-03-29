@@ -393,6 +393,14 @@ const parsePresetRunAllAction = (
 ): PresetRunAllArgs => {
   const restArgs = remaining.slice(2);
   const flags = parseOutputFlags(restArgs, "preset");
+
+  if (flags.json) {
+    exitWithError(
+      "--json is not supported for 'preset run-all'. Use --export to export results.",
+      "preset run-all"
+    );
+  }
+
   const names: string[] = [];
   let all = false;
 
@@ -425,7 +433,6 @@ const parsePresetRunAllAction = (
       all,
       export: flags.export,
       outputDir: flags.outputDir,
-      json: flags.json,
       help: global.help,
       version: global.version,
       token: global.token,

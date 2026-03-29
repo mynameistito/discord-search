@@ -54,7 +54,6 @@ export const PresetRunAllArgsSchema = GlobalFlagsSchema.extend({
     .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
     .optional(),
   outputDir: z.string().optional(),
-  json: z.boolean(),
 });
 
 export const PresetSaveArgsSchema = GlobalFlagsSchema.extend({

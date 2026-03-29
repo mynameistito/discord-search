@@ -264,7 +264,10 @@ const main = async (): Promise<void> => {
   const cliArgs = parseArgs(process.argv.slice(2));
 
   if (cliArgs.help) {
-    const subHelp = SUBCOMMAND_HELP[cliArgs.command];
+    const subHelp =
+      cliArgs.command in SUBCOMMAND_HELP
+        ? SUBCOMMAND_HELP[cliArgs.command as keyof typeof SUBCOMMAND_HELP]
+        : undefined;
     console.log(subHelp ?? HELP_TEXT);
     process.exit(0);
   }

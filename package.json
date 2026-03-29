@@ -35,7 +35,7 @@
     "fix": "ultracite fix",
     "test": "bun test",
     "prepare": "lefthook install",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run typecheck && bun run check && bun run build",
     "version": "changeset version",
     "release": "changeset publish"

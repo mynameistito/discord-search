@@ -121,9 +121,9 @@ const runPresetSearch = async (
   const s = spinner();
   s.start(`Searching: ${name}...`);
 
-  const result = await searchAllMessages(params, token, (fetched, total) => {
+  const result = await searchAllMessages(params, token, (progress) => {
     s.message(
-      `[${name}] Fetching... (${fetched.toLocaleString()} / ${total.toLocaleString()})`
+      `[${name}] Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
     );
   });
 
@@ -310,9 +310,9 @@ export const runAllPresetsNonInteractive = async (
     const result = await searchAllMessages(
       preset.params,
       token,
-      (fetched, total) => {
+      (progress) => {
         process.stderr.write(
-          `\r  Fetching... (${fetched.toLocaleString()} / ${total.toLocaleString()})`
+          `\r  Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
         );
       }
     );

@@ -132,9 +132,9 @@ export const executeSearch = async (
   const result = await searchAllMessages(
     searchParams,
     token,
-    (fetched, total) => {
+    (progress) => {
       s.message(
-        `Fetching messages... (${fetched.toLocaleString()} / ${total.toLocaleString()})${liveView ? " [LIVE]" : ""}`
+        `Fetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})${liveView ? " [LIVE]" : ""}`
       );
     },
     (pageMessages) => {
@@ -188,9 +188,9 @@ export const executeNonInteractiveSearch = async (
   const result = await searchAllMessages(
     searchParams,
     token,
-    (fetched, total) => {
+    (progress) => {
       process.stderr.write(
-        `\rFetching messages... (${fetched.toLocaleString()} / ${total.toLocaleString()})`
+        `\rFetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
       );
     }
   );

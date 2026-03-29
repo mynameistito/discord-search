@@ -33,9 +33,44 @@ import {
   savePreset,
 } from "@/presets.ts";
 
+const MAX_PRESET_DIR_NAME_LENGTH = 100;
+
+const isUnsafePathChar = (code: number): boolean =>
+  code <= 0x1f ||
+  code === 0x2f || // /
+  code === 0x5c || // \
+  code === 0x3a || // :
+  code === 0x2a || // *
+  code === 0x3f || // ?
+  code === 0x22 || // "
+  code === 0x3c || // <
+  code === 0x3e || // >
+  code === 0x7c || // |
+  code === 0x2e; // .
+
+const sanitizePresetDirName = (name: string): string => {
+  let sanitized = "";
+  for (
+    let i = 0;
+    i < name.length && sanitized.length < MAX_PRESET_DIR_NAME_LENGTH;
+    i++
+  ) {
+    const code = name.charCodeAt(i);
+    sanitized += isUnsafePathChar(code) ? "-" : name[i];
+  }
+  if (!sanitized || sanitized === "-") {
+    return "preset";
+  }
+  return sanitized;
+};
+
 export const handleManagePresets = async (): Promise<void> => {
   const presetsResult = await loadPresets();
-  if (presetsResult.isErr() || presetsResult.value.length === 0) {
+  if (presetsResult.isErr()) {
+    log.error(`Failed to load presets: ${presetsResult.error.message}`);
+    return;
+  }
+  if (presetsResult.value.length === 0) {
     log.info("No presets saved yet.");
     return;
   }
@@ -69,7 +104,11 @@ export const resolveSearchParams = async (
 ): Promise<SearchParams | null> => {
   if (action === "preset") {
     const presetsResult = await loadPresets();
-    if (presetsResult.isErr() || presetsResult.value.length === 0) {
+    if (presetsResult.isErr()) {
+      log.error(`Failed to load presets: ${presetsResult.error.message}`);
+      return null;
+    }
+    if (presetsResult.value.length === 0) {
       log.info("No presets saved yet. Starting new search.");
       return await promptForSearchParams(defaultGuildId);
     }
@@ -167,7 +206,7 @@ const runPresetSearch = async (
     return;
   }
 
-  const dir = `${OUTPUT_DIR}/${name}-${timestamp}`;
+  const dir = `${OUTPUT_DIR}/${sanitizePresetDirName(name)}-${timestamp}`;
   await mkdir(dir, { recursive: true });
 
   const exports: Promise<Result<void, ExportError>>[] = [];
@@ -360,9 +399,10 @@ export const runAllPresetsNonInteractive = async (
     const collated = collateResults(result.value);
 
     if (options.export) {
+      const safeName = sanitizePresetDirName(preset.name);
       const dir = options.outputDir
-        ? `${options.outputDir}/${preset.name}`
-        : `${OUTPUT_DIR}/${preset.name}-${timestamp}`;
+        ? `${options.outputDir}/${safeName}`
+        : `${OUTPUT_DIR}/${safeName}-${timestamp}`;
       await exportNonInteractive(
         collated,
         preset.params.guildId,

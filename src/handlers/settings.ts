@@ -167,12 +167,14 @@ export const setSettingNonInteractive = async (
   value: string,
   state: AppState
 ): Promise<void> => {
+  const normalized = value.trim() || undefined;
+
   if (key === "token") {
-    state.token = value;
+    state.token = normalized;
   } else if (key === "client-id") {
-    state.clientId = value;
+    state.clientId = normalized;
   } else if (key === "guild") {
-    state.defaultGuildId = value;
+    state.defaultGuildId = normalized;
   } else {
     process.stderr.write(
       `Unknown setting: ${key}. Valid keys: token, client-id, guild\n`

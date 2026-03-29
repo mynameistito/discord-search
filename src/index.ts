@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { intro, outro, select } from "@clack/prompts";
+import { intro, log, outro, select } from "@clack/prompts";
 import { exitWithError, HELP_TEXT, SUBCOMMAND_HELP } from "@/cli/args-help.ts";
 import { parseArgs } from "@/cli/args-parse.ts";
 import type {
@@ -45,8 +45,7 @@ type ConfigResult = Awaited<ReturnType<typeof loadConfig>>;
 
 const handleMenuAction = async (
   action: string,
-  state: AppState,
-  token: string
+  state: AppState
 ): Promise<boolean> => {
   if (action === "exit") {
     return false;
@@ -58,7 +57,11 @@ const handleMenuAction = async (
   }
 
   if (action === "run-all") {
-    await handleRunAllPresets(token);
+    if (!state.token) {
+      log.error("No token configured. Update your token in Settings first.");
+      return true;
+    }
+    await handleRunAllPresets(state.token);
     return true;
   }
 
@@ -67,9 +70,13 @@ const handleMenuAction = async (
     return true;
   }
 
+  if (!state.token) {
+    log.error("No token configured. Update your token in Settings first.");
+    return true;
+  }
   const searchParams = await resolveSearchParams(action, state.defaultGuildId);
   if (searchParams) {
-    await executeSearch(searchParams, token);
+    await executeSearch(searchParams, state.token);
   }
 
   return true;
@@ -110,11 +117,7 @@ const runInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
     });
     handleCancel(action);
 
-    const shouldContinue = await handleMenuAction(
-      action as string,
-      state,
-      token
-    );
+    const shouldContinue = await handleMenuAction(action as string, state);
     if (!shouldContinue) {
       break;
     }

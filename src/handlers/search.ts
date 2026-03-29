@@ -185,15 +185,11 @@ export const executeNonInteractiveSearch = async (
     json: boolean;
   }
 ): Promise<void> => {
-  const result = await searchAllMessages(
-    searchParams,
-    token,
-    (progress) => {
-      process.stderr.write(
-        `\rFetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
-      );
-    }
-  );
+  const result = await searchAllMessages(searchParams, token, (progress) => {
+    process.stderr.write(
+      `\rFetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
+    );
+  });
 
   process.stderr.write("\n");
 

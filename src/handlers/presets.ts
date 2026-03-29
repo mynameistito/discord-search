@@ -307,15 +307,11 @@ export const runAllPresetsNonInteractive = async (
       `[${i + 1}/${presets.length}] Running preset: ${preset.name}\n`
     );
 
-    const result = await searchAllMessages(
-      preset.params,
-      token,
-      (progress) => {
-        process.stderr.write(
-          `\r  Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
-        );
-      }
-    );
+    const result = await searchAllMessages(preset.params, token, (progress) => {
+      process.stderr.write(
+        `\r  Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
+      );
+    });
     process.stderr.write("\n");
 
     if (result.isErr()) {

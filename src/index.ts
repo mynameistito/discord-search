@@ -144,7 +144,13 @@ const handleSearchCommand = async (
   });
 
   if (cliArgs.savePreset) {
-    await savePreset(cliArgs.savePreset, cliArgs.params);
+    const saveResult = await savePreset(cliArgs.savePreset, cliArgs.params);
+    if (saveResult.isErr()) {
+      return exitWithError(
+        `Failed to save preset "${cliArgs.savePreset}": ${saveResult.error.message}`,
+        "preset"
+      );
+    }
     process.stderr.write(`Saved preset: ${cliArgs.savePreset}\n`);
   }
 };

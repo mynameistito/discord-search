@@ -229,7 +229,11 @@ const runPresetSearch = async (
 
 export const handleRunAllPresets = async (token: string): Promise<void> => {
   const presetsResult = await loadPresets();
-  if (presetsResult.isErr() || presetsResult.value.length === 0) {
+  if (presetsResult.isErr()) {
+    log.error(`Failed to load presets: ${presetsResult.error.message}`);
+    return;
+  }
+  if (presetsResult.value.length === 0) {
     log.info("No presets saved yet.");
     return;
   }

@@ -13,7 +13,9 @@ const showCurrentSettings = (state: AppState): void => {
   log.info(`Current settings:\n${lines.join("\n")}`);
 };
 
-export const saveStateToSettings = async (state: AppState): Promise<void> => {
+export const saveStateToSettings = async (
+  state: AppState
+): Promise<Result<void, Error>> => {
   const values: { token?: string; clientId?: string; guildId?: string } = {};
   if (state.token) {
     values.token = state.token;
@@ -28,9 +30,10 @@ export const saveStateToSettings = async (state: AppState): Promise<void> => {
   const result = await saveSettings(values);
   if (result.isOk()) {
     log.success("Saved settings to ~/.discord-search/settings.json");
-  } else {
-    log.error("Failed to save settings.");
+    return Result.ok(undefined);
   }
+  log.error(`Failed to save settings: ${result.error.message}`);
+  return Result.err(result.error);
 };
 
 const handleSettingsAction = async (
@@ -177,7 +180,13 @@ export const setSettingNonInteractive = async (
     process.exit(1);
   }
 
-  await saveStateToSettings(state);
+  const result = await saveStateToSettings(state);
+  if (result.isErr()) {
+    process.stderr.write(
+      `Failed to persist setting: ${result.error.message}\n`
+    );
+    process.exit(1);
+  }
   process.stderr.write(`Updated ${key}.\n`);
 };
 

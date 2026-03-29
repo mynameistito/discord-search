@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import {
   confirm,
   log,
@@ -6,11 +7,13 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
+import type { Result } from "better-result";
 import { matchError } from "better-result";
 import { handleCancel, promptForSearchParams } from "@/cli/prompts.ts";
 import { collateResults } from "@/collate.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 import { searchAllMessages } from "@/discord/search.ts";
+import type { ExportError } from "@/errors.ts";
 import {
   exportEmbedsCsv,
   exportFieldsCsv,
@@ -157,9 +160,9 @@ const runPresetSearch = async (
   }
 
   const dir = `${OUTPUT_DIR}/${name}-${timestamp}`;
-  await Bun.write(`${dir}/.gitkeep`, "");
+  await mkdir(dir, { recursive: true });
 
-  const exports: Promise<unknown>[] = [];
+  const exports: Promise<Result<void, ExportError>>[] = [];
   if (format === "json" || format === "all") {
     exports.push(exportJson(collated, `${dir}/data.json`));
   }
@@ -168,7 +171,12 @@ const runPresetSearch = async (
     exports.push(exportEmbedsCsv(collated, `${dir}/embeds.csv`));
     exports.push(exportFieldsCsv(collated, `${dir}/fields.csv`));
   }
-  await Promise.all(exports);
+  const results = await Promise.all(exports);
+  const failed = results.find((r) => r.isErr());
+  if (failed) {
+    log.error(`Export failed for ${name}: ${failed.error.message}`);
+    return;
+  }
   log.info(`Exported to ${dir}/`);
 };
 

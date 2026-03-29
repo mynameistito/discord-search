@@ -12,12 +12,26 @@ import {
 } from "@/export.ts";
 import { OUTPUT_DIR } from "@/paths.ts";
 
+const VALID_EXPORT_FORMATS = new Set([
+  "json",
+  "csv-messages",
+  "csv-embeds",
+  "csv-fields",
+  "all",
+]);
+
 export const exportNonInteractive = async (
   data: ReturnType<typeof collateResults>,
   guildId: string,
   format: string,
   outputDir?: string
 ): Promise<string> => {
+  if (!VALID_EXPORT_FORMATS.has(format)) {
+    throw new Error(
+      `Invalid export format: "${format}". Valid formats: ${[...VALID_EXPORT_FORMATS].join(", ")}`
+    );
+  }
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const dir = outputDir ?? `${OUTPUT_DIR}/${guildId}-${timestamp}`;
 

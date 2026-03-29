@@ -335,6 +335,31 @@ export const runPresetNonInteractive = async (
   await executeNonInteractiveSearch(preset.params, token, options);
 };
 
+const tryExportPreset = async (
+  collated: ReturnType<typeof collateResults>,
+  preset: Preset,
+  options: { export: string; outputDir?: string },
+  timestamp: string
+): Promise<void> => {
+  try {
+    const safeName = sanitizePresetDirName(preset.name);
+    const dir = options.outputDir
+      ? `${options.outputDir}/${safeName}`
+      : `${OUTPUT_DIR}/${safeName}-${timestamp}`;
+    await exportNonInteractive(
+      collated,
+      preset.params.guildId,
+      options.export,
+      dir
+    );
+    process.stderr.write(`  Exported to ${dir}/\n`);
+  } catch (err) {
+    process.stderr.write(
+      `  Export failed: ${err instanceof Error ? err.message : String(err)}\n`
+    );
+  }
+};
+
 export const runAllPresetsNonInteractive = async (
   names: string[],
   all: boolean,
@@ -403,17 +428,12 @@ export const runAllPresetsNonInteractive = async (
     const collated = collateResults(result.value);
 
     if (options.export) {
-      const safeName = sanitizePresetDirName(preset.name);
-      const dir = options.outputDir
-        ? `${options.outputDir}/${safeName}`
-        : `${OUTPUT_DIR}/${safeName}-${timestamp}`;
-      await exportNonInteractive(
+      await tryExportPreset(
         collated,
-        preset.params.guildId,
-        options.export,
-        dir
+        preset,
+        { export: options.export, outputDir: options.outputDir },
+        timestamp
       );
-      process.stderr.write(`  Exported to ${dir}/\n`);
     }
   }
 

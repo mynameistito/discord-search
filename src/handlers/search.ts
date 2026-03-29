@@ -214,7 +214,7 @@ export const executeNonInteractiveSearch = async (
 
   if (messages.length === 0) {
     if (options.json) {
-      process.stdout.write('{"totalMessages":0,"messages":[]}\n');
+      process.stdout.write(`${JSON.stringify(collateResults([]))}\n`);
     }
     return;
   }

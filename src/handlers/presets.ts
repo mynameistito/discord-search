@@ -22,6 +22,7 @@ import {
   displaySummary,
   executeNonInteractiveSearch,
 } from "@/handlers/search.ts";
+import { OUTPUT_DIR } from "@/paths.ts";
 import {
   deletePreset,
   loadPresets,
@@ -155,7 +156,7 @@ const runPresetSearch = async (
     return;
   }
 
-  const dir = `./output/${name}-${timestamp}`;
+  const dir = `${OUTPUT_DIR}/${name}-${timestamp}`;
   await Bun.write(`${dir}/.gitkeep`, "");
 
   const exports: Promise<unknown>[] = [];
@@ -345,7 +346,7 @@ export const runAllPresetsNonInteractive = async (
     if (options.export) {
       const dir = options.outputDir
         ? `${options.outputDir}/${preset.name}`
-        : `./output/${preset.name}-${timestamp}`;
+        : `${OUTPUT_DIR}/${preset.name}-${timestamp}`;
       await exportNonInteractive(
         collated,
         preset.params.guildId,

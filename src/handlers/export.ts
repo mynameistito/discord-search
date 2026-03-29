@@ -1,7 +1,9 @@
 import { mkdir } from "node:fs/promises";
 import { select, spinner, text } from "@clack/prompts";
+import type { Result } from "better-result";
 import { handleCancel } from "@/cli/prompts.ts";
 import type { collateResults } from "@/collate.ts";
+import type { ExportError } from "@/errors.ts";
 import {
   exportEmbedsCsv,
   exportFieldsCsv,
@@ -21,7 +23,7 @@ export const exportNonInteractive = async (
 
   await mkdir(dir, { recursive: true });
 
-  const exports: Promise<unknown>[] = [];
+  const exports: Promise<Result<void, ExportError>>[] = [];
 
   if (format === "json" || format === "all") {
     exports.push(exportJson(data, `${dir}/data.json`));
@@ -36,7 +38,12 @@ export const exportNonInteractive = async (
     exports.push(exportFieldsCsv(data, `${dir}/fields.csv`));
   }
 
-  await Promise.all(exports);
+  const results = await Promise.all(exports);
+  const failed = results.find((r) => r.isErr());
+  if (failed) {
+    throw failed.error;
+  }
+
   return dir;
 };
 
@@ -48,9 +55,9 @@ export const handleExport = async (
     message: "Export format:",
     options: [
       { value: "json", label: "JSON (full data)" },
-      { value: "messages", label: "CSV - Messages" },
-      { value: "embeds", label: "CSV - Embeds" },
-      { value: "fields", label: "CSV - Extracted Fields" },
+      { value: "csv-messages", label: "CSV - Messages" },
+      { value: "csv-embeds", label: "CSV - Embeds" },
+      { value: "csv-fields", label: "CSV - Extracted Fields" },
       { value: "all", label: "All of the above" },
       { value: "none", label: "None (just view summary)" },
     ],
@@ -78,22 +85,27 @@ export const handleExport = async (
   // Ensure directory exists
   await mkdir(dir, { recursive: true });
 
-  const exports: Promise<unknown>[] = [];
+  const exports: Promise<Result<void, ExportError>>[] = [];
 
   if (format === "json" || format === "all") {
     exports.push(exportJson(data, `${dir}/data.json`));
   }
-  if (format === "messages" || format === "all") {
+  if (format === "csv-messages" || format === "all") {
     exports.push(exportMessagesCsv(data, `${dir}/messages.csv`));
   }
-  if (format === "embeds" || format === "all") {
+  if (format === "csv-embeds" || format === "all") {
     exports.push(exportEmbedsCsv(data, `${dir}/embeds.csv`));
   }
-  if (format === "fields" || format === "all") {
+  if (format === "csv-fields" || format === "all") {
     exports.push(exportFieldsCsv(data, `${dir}/fields.csv`));
   }
 
-  await Promise.all(exports);
+  const results = await Promise.all(exports);
+  const failed = results.find((r) => r.isErr());
+  if (failed) {
+    s.stop(`Export failed: ${failed.error.message}`);
+    return;
+  }
 
   s.stop(`Exported to ${dir}/`);
 };

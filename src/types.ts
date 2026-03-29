@@ -1,5 +1,5 @@
 export type AppState = {
-  token: string;
+  token: string | undefined;
   clientId: string | undefined;
   defaultGuildId: string | undefined;
 };

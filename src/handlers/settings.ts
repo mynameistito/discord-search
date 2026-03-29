@@ -1,4 +1,5 @@
 import { confirm, log, password, select, text } from "@clack/prompts";
+import { Result } from "better-result";
 import { handleCancel, promptForToken } from "@/cli/prompts.ts";
 import { generateInviteLink, type loadConfig, saveSettings } from "@/config.ts";
 import type { AppState } from "@/types.ts";
@@ -13,9 +14,10 @@ const showCurrentSettings = (state: AppState): void => {
 };
 
 export const saveStateToSettings = async (state: AppState): Promise<void> => {
-  const values: { token: string; clientId?: string; guildId?: string } = {
-    token: state.token,
-  };
+  const values: { token?: string; clientId?: string; guildId?: string } = {};
+  if (state.token) {
+    values.token = state.token;
+  }
   if (state.clientId) {
     values.clientId = state.clientId;
   }
@@ -40,9 +42,7 @@ const handleSettingsAction = async (
     handleCancel(newToken);
     state.token = newToken as string;
     log.success("Bot token updated.");
-  }
-
-  if (action === "client-id") {
+  } else if (action === "client-id") {
     const input = await text({
       message: "Enter Discord Application Client ID:",
       initialValue: state.clientId ?? "",
@@ -50,9 +50,7 @@ const handleSettingsAction = async (
     handleCancel(input);
     state.clientId = (input as string).trim() || undefined;
     log.success("Client ID updated.");
-  }
-
-  if (action === "guild") {
+  } else if (action === "guild") {
     const input = await text({
       message: "Enter default guild/server ID:",
       initialValue: state.defaultGuildId ?? "",
@@ -60,9 +58,7 @@ const handleSettingsAction = async (
     handleCancel(input);
     state.defaultGuildId = (input as string).trim() || undefined;
     log.success("Default guild ID updated.");
-  }
-
-  if (action === "invite") {
+  } else if (action === "invite") {
     const clientId = state.clientId;
     if (!clientId) {
       log.warn("Set a Client ID first.");
@@ -70,9 +66,7 @@ const handleSettingsAction = async (
     }
     const link = generateInviteLink(clientId);
     log.info(`Bot invite link:\n  ${link}`);
-  }
-
-  if (action === "save") {
+  } else if (action === "save") {
     await saveStateToSettings(state);
   }
 };
@@ -138,17 +132,16 @@ export const resolveToken = async (
 export const resolveTokenNonInteractive = (
   cliToken: string | undefined,
   configResult: Awaited<ReturnType<typeof loadConfig>>
-): string => {
+): Result<string, Error> => {
   if (cliToken) {
-    return cliToken;
+    return Result.ok(cliToken);
   }
   if (configResult.isOk()) {
-    return configResult.value.token;
+    return Result.ok(configResult.value.token);
   }
-  process.stderr.write(
-    "Error: No token found. Provide --token or set DISCORD_BOT_TOKEN.\n"
+  return Result.err(
+    new Error("No token found. Provide --token or set DISCORD_BOT_TOKEN.")
   );
-  process.exit(1);
 };
 
 export const showSettingsNonInteractive = (state: AppState): void => {

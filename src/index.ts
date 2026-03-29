@@ -57,7 +57,7 @@ const handleMenuAction = async (
   }
 
   if (action === "run-all") {
-    await handleRunAllPresets(state.token);
+    await handleRunAllPresets(state.token as string);
     return true;
   }
 
@@ -68,7 +68,7 @@ const handleMenuAction = async (
 
   const searchParams = await resolveSearchParams(action, state.defaultGuildId);
   if (searchParams) {
-    await executeSearch(searchParams, state.token);
+    await executeSearch(searchParams, state.token as string);
   }
 
   return true;
@@ -125,8 +125,11 @@ const handleSearchCommand = async (
   if (!cliArgs.params.guildId) {
     exitWithError("--guild is required for search.", "search");
   }
-  const token = resolveTokenNonInteractive(cliArgs.token, configResult);
-  await executeNonInteractiveSearch(cliArgs.params, token, {
+  const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
+  if (tokenResult.isErr()) {
+    return exitWithError(tokenResult.error.message, "search");
+  }
+  await executeNonInteractiveSearch(cliArgs.params, tokenResult.value, {
     export: cliArgs.export,
     outputDir: cliArgs.outputDir,
     json: cliArgs.json,
@@ -142,8 +145,11 @@ const handlePresetRunCommand = async (
   cliArgs: PresetRunArgs,
   configResult: ConfigResult
 ): Promise<void> => {
-  const token = resolveTokenNonInteractive(cliArgs.token, configResult);
-  await runPresetNonInteractive(cliArgs.name, token, {
+  const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
+  if (tokenResult.isErr()) {
+    return exitWithError(tokenResult.error.message, "preset");
+  }
+  await runPresetNonInteractive(cliArgs.name, tokenResult.value, {
     export: cliArgs.export,
     outputDir: cliArgs.outputDir,
     json: cliArgs.json,
@@ -154,11 +160,19 @@ const handlePresetRunAllCommand = async (
   cliArgs: PresetRunAllArgs,
   configResult: ConfigResult
 ): Promise<void> => {
-  const token = resolveTokenNonInteractive(cliArgs.token, configResult);
-  await runAllPresetsNonInteractive(cliArgs.names, cliArgs.all, token, {
-    export: cliArgs.export,
-    outputDir: cliArgs.outputDir,
-  });
+  const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
+  if (tokenResult.isErr()) {
+    return exitWithError(tokenResult.error.message, "preset");
+  }
+  await runAllPresetsNonInteractive(
+    cliArgs.names,
+    cliArgs.all,
+    tokenResult.value,
+    {
+      export: cliArgs.export,
+      outputDir: cliArgs.outputDir,
+    }
+  );
 };
 
 const handlePresetSaveCommand = async (
@@ -177,7 +191,7 @@ const buildStateFromConfig = (
   configResult: ConfigResult,
   cliToken?: string
 ): AppState => ({
-  token: configResult.isOk() ? configResult.value.token : (cliToken ?? ""),
+  token: configResult.isOk() ? configResult.value.token : cliToken,
   clientId: configResult.isOk() ? configResult.value.clientId : undefined,
   defaultGuildId: configResult.isOk()
     ? configResult.value.defaultGuildId
@@ -273,10 +287,10 @@ const main = async (): Promise<void> => {
   }
 
   if (cliArgs.version) {
-    const pkg = await Bun.file(
+    const pkg = (await Bun.file(
       new URL("../package.json", import.meta.url)
-    ).json();
-    console.log(`discord-search ${pkg.version as string}`);
+    ).json()) as { version: string };
+    console.log(`discord-search ${pkg.version}`);
     process.exit(0);
   }
 

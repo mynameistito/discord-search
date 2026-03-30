@@ -75,7 +75,7 @@
     "lefthook": "^2.1.4",
     "tsdown": "^0.21.5",
     "typescript": "^6.0.2",
-    "ultracite": "7.3.2"
+    "ultracite": "7.4.0"
   },
   "publishConfig": {
     "access": "public"

@@ -43,9 +43,7 @@ You'll need three things from the Discord Developer Portal:
 
 ## Installation
 ```bash
-git clone https://github.com/mynameistito/discord-search
-cd discord-search
-bun install
+bun add -g discord-search@latest
 ```
 ### Optional
 Create a .env file in the project root:
@@ -57,14 +55,14 @@ This is optional, you will be asked for these when running the tool.
 ## Usage
 Run the tool:
 ```bash
-bun run index.ts
+discord-search
 ```
 Or with command-line options:
 ```
-bun run index.ts --token YOUR_TOKEN
-bun run index.ts --guild 123456789
-bun run index.ts --client-id 123456789
-bun run index.ts --help
+discord-search --token YOUR_TOKEN
+discord-search --guild 123456789
+discord-search --client-id 123456789
+discord-search --help
 ```
 
 > [!NOTE]

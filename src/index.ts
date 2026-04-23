@@ -302,10 +302,17 @@ const main = async (): Promise<void> => {
   }
 
   if (cliArgs.version) {
-    const pkg = JSON.parse(
+    const pkg: unknown = JSON.parse(
       await readFile(new URL("../package.json", import.meta.url), "utf-8")
-    ) as { version: string };
-    console.log(`discord-search ${pkg.version}`);
+    );
+    const version =
+      pkg &&
+      typeof pkg === "object" &&
+      "version" in pkg &&
+      typeof pkg.version === "string"
+        ? pkg.version
+        : "unknown";
+    console.log(`discord-search ${version}`);
     process.exit(0);
   }
 

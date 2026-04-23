@@ -82,7 +82,7 @@ export const exportMessagesCsv = async (
         );
       }
 
-      await writeFile(filePath, rows.join("\n"));
+      await writeFile(filePath, `${rows.join("\n")}\n`);
     },
     catch: (cause) =>
       new ExportError({
@@ -133,7 +133,7 @@ export const exportEmbedsCsv = async (
         );
       }
 
-      await writeFile(filePath, rows.join("\n"));
+      await writeFile(filePath, `${rows.join("\n")}\n`);
     },
     catch: (cause) =>
       new ExportError({
@@ -182,7 +182,7 @@ export const exportFieldsCsv = async (
         );
       }
 
-      await writeFile(filePath, rows.join("\n"));
+      await writeFile(filePath, `${rows.join("\n")}\n`);
     },
     catch: (cause) =>
       new ExportError({

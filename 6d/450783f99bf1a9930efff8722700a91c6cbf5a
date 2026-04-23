@@ -1,0 +1,23 @@
+src/config.ts
+  908d9e89beae2444 108-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "6d450783f99bf1a9930efff8722700a91c6cbf5a",
+  "prompts": {
+    "908d9e89beae2444": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9fdceaec-e209-4300-8607-ffe5dda91cb3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 26,
+      "total_deletions": 30,
+      "accepted_lines": 26,
+      "overriden_lines": 0
+    }
+  }
+}

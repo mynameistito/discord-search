@@ -105,7 +105,9 @@ export const saveSettings = async (
 
     const merged = { ...existing, ...validationResult.data };
 
-    await writeFile(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`);
+    await writeFile(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`, {
+      mode: 0o600,
+    });
 
     // Secure file permissions (owner-only)
     try {

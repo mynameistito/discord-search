@@ -1,0 +1,155 @@
+src/paths.ts
+  2339f1a27b04ac3c 8-11,14-17
+src/presets.ts
+  2339f1a27b04ac3c 5,16-76,80-81,87-89,119-120,141-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "240a192db028fe64971bd6433bd1294ec0909cc6",
+  "prompts": {
+    "2339f1a27b04ac3c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf2bd6d6-63c7-495e-8d3f-2f4919da8948",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 123,
+      "total_deletions": 48,
+      "accepted_lines": 80,
+      "overriden_lines": 0
+    },
+    "4d9856e564713180": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da883f6effenMmvuFFGYL3XSn",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 42,
+      "total_deletions": 17,
+      "accepted_lines": 28,
+      "overriden_lines": 1
+    },
+    "63929b0d189d9144": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da71e3b6ffeO4leSKbUE7gtu8",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 25,
+      "total_deletions": 6,
+      "accepted_lines": 2,
+      "overriden_lines": 3
+    },
+    "683cf375cb513b7c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2daaed1bdffecmjtnpIJG2SAY2",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 81,
+      "total_deletions": 116,
+      "accepted_lines": 55,
+      "overriden_lines": 1
+    },
+    "80f78331e5e3f607": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2db1494a7ffeI1d6sviO1UjTTW",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 75,
+      "total_deletions": 2,
+      "accepted_lines": 58,
+      "overriden_lines": 10
+    },
+    "88ba736eb43ebb0d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da3a67a8ffey3ooMVjiCc86Te",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 33,
+      "total_deletions": 0,
+      "accepted_lines": 33,
+      "overriden_lines": 0
+    },
+    "ad88a893b9d208fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da3a5abdffeXjl69x9I0qtUFI",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 25,
+      "total_deletions": 0,
+      "accepted_lines": 25,
+      "overriden_lines": 0
+    },
+    "b3d1657887592acf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da3a7c47ffeuw0aL0zX2Tdgql",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 55,
+      "total_deletions": 109,
+      "accepted_lines": 30,
+      "overriden_lines": 1
+    },
+    "c073f01781e51ecf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da986aa4ffe9d7x9JU86pbah4",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 1099,
+      "total_deletions": 1,
+      "accepted_lines": 889,
+      "overriden_lines": 102
+    },
+    "c54417024d94497e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da480efaffeLAploRR28lMT8m",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 58,
+      "total_deletions": 53,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    },
+    "e575f16b07105be9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2da3a49eaffeLYEyPRKLw0Jr3S",
+        "model": "unknown"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 0,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    }
+  }
+}

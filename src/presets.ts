@@ -1,8 +1,10 @@
 import { Result } from "better-result";
+import { parse as parseJsonc } from "jsonc-parser";
 import type { SearchParams } from "@/discord/schemas.ts";
 import { ExportError } from "@/errors.ts";
 import { fileExists, readTextFile, writeTextFile } from "@/fs.ts";
 
+const PRESETS_FILE_JSONC = ".discord-search-presets.jsonc";
 const PRESETS_FILE = ".discord-search-presets.json";
 
 export type Preset = {
@@ -10,11 +12,21 @@ export type Preset = {
   params: SearchParams;
 };
 
+const resolvePresetsFile = async (): Promise<string> => {
+  if (await fileExists(PRESETS_FILE_JSONC)) {
+    return PRESETS_FILE_JSONC;
+  }
+  return PRESETS_FILE;
+};
+
 export const loadPresets = async (): Promise<Result<Preset[], ExportError>> => {
   return await Result.tryPromise({
     try: async () => {
-      const exists = await fileExists(PRESETS_FILE);
-      if (!exists) {
+      if (await fileExists(PRESETS_FILE_JSONC)) {
+        const text = await readTextFile(PRESETS_FILE_JSONC);
+        return parseJsonc(text) as Preset[];
+      }
+      if (!(await fileExists(PRESETS_FILE))) {
         return [];
       }
       const text = await readTextFile(PRESETS_FILE);
@@ -37,7 +49,6 @@ export const savePreset = async (
       const presetsResult = await loadPresets();
       const presets = presetsResult.isOk() ? presetsResult.value : [];
 
-      // Replace existing preset with same name or add new
       const index = presets.findIndex((p) => p.name === name);
       if (index >= 0) {
         presets[index] = { name, params };
@@ -45,7 +56,8 @@ export const savePreset = async (
         presets.push({ name, params });
       }
 
-      await writeTextFile(PRESETS_FILE, JSON.stringify(presets, null, 2));
+      const file = await resolvePresetsFile();
+      await writeTextFile(file, JSON.stringify(presets, null, 2));
     },
     catch: (cause) =>
       new ExportError({
@@ -63,7 +75,8 @@ export const deletePreset = async (
       const presetsResult = await loadPresets();
       const presets = presetsResult.isOk() ? presetsResult.value : [];
       const filtered = presets.filter((p) => p.name !== name);
-      await writeTextFile(PRESETS_FILE, JSON.stringify(filtered, null, 2));
+      const file = await resolvePresetsFile();
+      await writeTextFile(file, JSON.stringify(filtered, null, 2));
     },
     catch: (cause) =>
       new ExportError({

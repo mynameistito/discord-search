@@ -75,8 +75,8 @@ const parseJsonc = (text: string): unknown => {
   return JSON.parse(out.join(""));
 };
 
-export const loadPresets = async (): Promise<Result<Preset[], PresetError>> => {
-  return await Result.tryPromise({
+export const loadPresets = async (): Promise<Result<Preset[], PresetError>> =>
+  await Result.tryPromise({
     try: async () => {
       const presetsFile = await getPresetsFile();
       let text: string;
@@ -104,13 +104,12 @@ export const loadPresets = async (): Promise<Result<Preset[], PresetError>> => {
         cause,
       }),
   });
-};
 
 export const savePreset = async (
   name: string,
   params: z.infer<typeof SearchParamsSchema>
-): Promise<Result<void, PresetError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, PresetError>> =>
+  await Result.tryPromise({
     try: async () => {
       const presetsResult = await loadPresets();
       if (!presetsResult.isOk()) {
@@ -134,12 +133,11 @@ export const savePreset = async (
         cause,
       }),
   });
-};
 
 export const deletePreset = async (
   name: string
-): Promise<Result<void, PresetError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, PresetError>> =>
+  await Result.tryPromise({
     try: async () => {
       const presetsResult = await loadPresets();
       if (!presetsResult.isOk()) {
@@ -156,4 +154,3 @@ export const deletePreset = async (
         cause,
       }),
   });
-};

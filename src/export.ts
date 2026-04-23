@@ -21,8 +21,8 @@ const toCsvRow = (fields: string[]): string =>
 export const exportJson = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
     try: async () => {
       const { messages: _messages, ...summary } = data;
       const output = {
@@ -45,13 +45,12 @@ export const exportJson = async (
         cause,
       }),
   });
-};
 
 export const exportMessagesCsv = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
     try: async () => {
       const headers = [
         "message_id",
@@ -91,13 +90,12 @@ export const exportMessagesCsv = async (
         cause,
       }),
   });
-};
 
 export const exportEmbedsCsv = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
     try: async () => {
       const headers = [
         "message_id",
@@ -143,7 +141,6 @@ export const exportEmbedsCsv = async (
         cause,
       }),
   });
-};
 
 export const exportFieldsCsv = async (
   data: CollatedData,

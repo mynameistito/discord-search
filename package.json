@@ -30,7 +30,7 @@
   "packageManager": "bun@1.3.11",
   "scripts": {
     "build": "tsdown",
-    "dev": "tsdown --watch",
+    "dev": "bun src/index.ts",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "test": "bun test",

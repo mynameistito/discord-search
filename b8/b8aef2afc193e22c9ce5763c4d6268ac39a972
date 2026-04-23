@@ -1,0 +1,27 @@
+src/presets.ts
+  a1054094e32131b7 7,15-21,25-29,59-60,78-79
+.changeset/jsonc-preset-support.md
+  a1054094e32131b7 1-5
+package.json
+  a1054094e32131b7 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "b8b8aef2afc193e22c9ce5763c4d6268ac39a972",
+  "prompts": {
+    "a1054094e32131b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "726c98b3-5012-47a0-bbe6-5221a6f6742c",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 5,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}

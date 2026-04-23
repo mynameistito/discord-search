@@ -1,0 +1,29 @@
+package.json
+  908d9e89beae2444 66-67,71-78
+src/export.ts
+  908d9e89beae2444 24-25,52-53,97-98
+src/presets.ts
+  908d9e89beae2444 78-79,111-112,139-140
+src/cli/utils.ts
+  908d9e89beae2444 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "442f85f71a2413c40f311c36a837cca00429830d",
+  "prompts": {
+    "908d9e89beae2444": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9fdceaec-e209-4300-8607-ffe5dda91cb3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 29,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}

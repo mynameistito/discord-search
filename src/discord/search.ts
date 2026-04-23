@@ -130,7 +130,7 @@ export const searchMessages = async (
 ): Promise<Result<SearchResponse, SearchError>> => {
   const validatedParams = validateSearchParams(params);
   if (validatedParams.isErr()) {
-    return validatedParams;
+    return Result.err(validatedParams.error);
   }
 
   return await fetchSearch(validatedParams.value, token, offset, maxId);
@@ -157,7 +157,7 @@ const fetchPage = async (
 ): Promise<Result<"done" | "continue" | "break", SearchError>> => {
   const result = await fetchSearch(params, token, offset, maxId);
   if (result.isErr()) {
-    return result;
+    return Result.err(result.error);
   }
 
   const data = result.value;
@@ -250,7 +250,7 @@ const fetchPartition = async (
       config.onPage
     );
     if (pageResult.isErr()) {
-      return pageResult;
+      return Result.err(pageResult.error);
     }
     if (pageResult.value === "done") {
       return new Ok("done" as const);
@@ -272,7 +272,7 @@ export const searchAllMessages = async (
 ): Promise<Result<Message[], SearchError>> => {
   const validatedParams = validateSearchParams(params);
   if (validatedParams.isErr()) {
-    return validatedParams;
+    return Result.err(validatedParams.error);
   }
 
   const queryParams = validatedParams.value;
@@ -315,7 +315,7 @@ export const searchAllMessages = async (
   while (true) {
     const result = await fetchPartition(config, state, currentMaxId);
     if (result.isErr()) {
-      return result;
+      return Result.err(result.error);
     }
     if (result.value === "done") {
       break;

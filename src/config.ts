@@ -1,4 +1,4 @@
-import { chmod } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { Err, Ok, type Result } from "better-result";
 import { z } from "zod";
 import { ConfigError, ExportError } from "@/errors.ts";
@@ -19,12 +19,21 @@ export type Config = {
 export type SettingsJson = z.infer<typeof SettingsSchema>;
 
 const readSettingsFile = async (): Promise<SettingsJson> => {
-  const file = Bun.file(SETTINGS_FILE);
-  if (!(await file.exists())) {
-    return {};
+  let text: string;
+  try {
+    text = await readFile(SETTINGS_FILE, "utf-8");
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code === "ENOENT"
+    ) {
+      return {};
+    }
+    throw err;
   }
   try {
-    const text = await file.text();
     const parsed = JSON.parse(text);
 
     // Validate with Zod
@@ -96,7 +105,9 @@ export const saveSettings = async (
 
     const merged = { ...existing, ...validationResult.data };
 
-    await Bun.write(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`);
+    await writeFile(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`, {
+      mode: 0o600,
+    });
 
     // Secure file permissions (owner-only)
     try {

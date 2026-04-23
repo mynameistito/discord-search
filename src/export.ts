@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { Result } from "better-result";
 import type { CollatedData } from "@/collate.ts";
 import { ExportError } from "@/errors.ts";
@@ -20,8 +21,8 @@ const toCsvRow = (fields: string[]): string =>
 export const exportJson = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
     try: async () => {
       const { messages: _messages, ...summary } = data;
       const output = {
@@ -36,7 +37,7 @@ export const exportJson = async (
           attachments: msg.attachments,
         })),
       };
-      await Bun.write(filePath, JSON.stringify(output, null, 2));
+      await writeFile(filePath, JSON.stringify(output, null, 2));
     },
     catch: (cause) =>
       new ExportError({
@@ -44,13 +45,12 @@ export const exportJson = async (
         cause,
       }),
   });
-};
 
 export const exportMessagesCsv = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
     try: async () => {
       const headers = [
         "message_id",
@@ -82,7 +82,7 @@ export const exportMessagesCsv = async (
         );
       }
 
-      await Bun.write(filePath, rows.join("\n"));
+      await writeFile(filePath, `${rows.join("\n")}\n`);
     },
     catch: (cause) =>
       new ExportError({
@@ -90,13 +90,12 @@ export const exportMessagesCsv = async (
         cause,
       }),
   });
-};
 
 export const exportEmbedsCsv = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
     try: async () => {
       const headers = [
         "message_id",
@@ -134,7 +133,7 @@ export const exportEmbedsCsv = async (
         );
       }
 
-      await Bun.write(filePath, rows.join("\n"));
+      await writeFile(filePath, `${rows.join("\n")}\n`);
     },
     catch: (cause) =>
       new ExportError({
@@ -142,7 +141,6 @@ export const exportEmbedsCsv = async (
         cause,
       }),
   });
-};
 
 export const exportFieldsCsv = async (
   data: CollatedData,
@@ -184,7 +182,7 @@ export const exportFieldsCsv = async (
         );
       }
 
-      await Bun.write(filePath, rows.join("\n"));
+      await writeFile(filePath, `${rows.join("\n")}\n`);
     },
     catch: (cause) =>
       new ExportError({

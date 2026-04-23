@@ -1,4 +1,4 @@
-import { chmod, mkdir } from "node:fs/promises";
+import { access, chmod, constants, mkdir, open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -12,8 +12,20 @@ export const PRESETS_FILE_JSONC = join(
 export const OUTPUT_DIR = join(APP_DIR, "output");
 
 export const getPresetsFile = async (): Promise<string> => {
-  const jsoncFile = Bun.file(PRESETS_FILE_JSONC);
-  return (await jsoncFile.exists()) ? PRESETS_FILE_JSONC : PRESETS_FILE;
+  try {
+    await access(PRESETS_FILE_JSONC, constants.F_OK);
+    return PRESETS_FILE_JSONC;
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code === "ENOENT"
+    ) {
+      return PRESETS_FILE;
+    }
+    throw err;
+  }
 };
 
 const chmodSafe = async (path: string, mode: number): Promise<void> => {
@@ -41,8 +53,19 @@ export const ensureAppDir = async (): Promise<void> => {
   await chmodSafe(OUTPUT_DIR, 0o700);
 
   const gitignorePath = join(APP_DIR, ".gitignore");
-  const file = Bun.file(gitignorePath);
-  if (!(await file.exists())) {
-    await Bun.write(gitignorePath, "*\n");
+  try {
+    const fh = await open(gitignorePath, "wx");
+    await fh.writeFile("*\n").finally(() => fh.close());
+  } catch (err) {
+    if (
+      !(
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        err.code === "EEXIST"
+      )
+    ) {
+      throw err;
+    }
   }
 };

@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { Result } from "better-result";
 import type { CollatedData } from "@/collate.ts";
 import { ExportError } from "@/errors.ts";
@@ -36,7 +37,7 @@ export const exportJson = async (
           attachments: msg.attachments,
         })),
       };
-      await Bun.write(filePath, JSON.stringify(output, null, 2));
+      await writeFile(filePath, JSON.stringify(output, null, 2));
     },
     catch: (cause) =>
       new ExportError({
@@ -82,7 +83,7 @@ export const exportMessagesCsv = async (
         );
       }
 
-      await Bun.write(filePath, rows.join("\n"));
+      await writeFile(filePath, rows.join("\n"));
     },
     catch: (cause) =>
       new ExportError({
@@ -134,7 +135,7 @@ export const exportEmbedsCsv = async (
         );
       }
 
-      await Bun.write(filePath, rows.join("\n"));
+      await writeFile(filePath, rows.join("\n"));
     },
     catch: (cause) =>
       new ExportError({
@@ -184,7 +185,7 @@ export const exportFieldsCsv = async (
         );
       }
 
-      await Bun.write(filePath, rows.join("\n"));
+      await writeFile(filePath, rows.join("\n"));
     },
     catch: (cause) =>
       new ExportError({

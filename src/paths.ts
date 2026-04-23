@@ -1,4 +1,4 @@
-import { chmod, mkdir } from "node:fs/promises";
+import { access, chmod, mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -12,8 +12,12 @@ export const PRESETS_FILE_JSONC = join(
 export const OUTPUT_DIR = join(APP_DIR, "output");
 
 export const getPresetsFile = async (): Promise<string> => {
-  const jsoncFile = Bun.file(PRESETS_FILE_JSONC);
-  return (await jsoncFile.exists()) ? PRESETS_FILE_JSONC : PRESETS_FILE;
+  try {
+    await access(PRESETS_FILE_JSONC);
+    return PRESETS_FILE_JSONC;
+  } catch {
+    return PRESETS_FILE;
+  }
 };
 
 const chmodSafe = async (path: string, mode: number): Promise<void> => {
@@ -41,8 +45,9 @@ export const ensureAppDir = async (): Promise<void> => {
   await chmodSafe(OUTPUT_DIR, 0o700);
 
   const gitignorePath = join(APP_DIR, ".gitignore");
-  const file = Bun.file(gitignorePath);
-  if (!(await file.exists())) {
-    await Bun.write(gitignorePath, "*\n");
+  try {
+    await access(gitignorePath);
+  } catch {
+    await writeFile(gitignorePath, "*\n");
   }
 };

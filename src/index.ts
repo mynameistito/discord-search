@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFile } from "node:fs/promises";
 import { intro, log, outro, select } from "@clack/prompts";
 import { exitWithError, HELP_TEXT, SUBCOMMAND_HELP } from "@/cli/args-help.ts";
 import { parseArgs } from "@/cli/args-parse.ts";
@@ -301,9 +302,9 @@ const main = async (): Promise<void> => {
   }
 
   if (cliArgs.version) {
-    const pkg = (await Bun.file(
-      new URL("../package.json", import.meta.url)
-    ).json()) as { version: string };
+    const pkg = JSON.parse(
+      await readFile(new URL("../package.json", import.meta.url), "utf-8")
+    ) as { version: string };
     console.log(`discord-search ${pkg.version}`);
     process.exit(0);
   }

@@ -1,3 +1,4 @@
+import { readFile, writeFile } from "node:fs/promises";
 import { Result } from "better-result";
 import { z } from "zod";
 import { SearchParamsSchema } from "@/discord/schemas.ts";
@@ -78,12 +79,20 @@ export const loadPresets = async (): Promise<Result<Preset[], PresetError>> => {
   return await Result.tryPromise({
     try: async () => {
       const presetsFile = await getPresetsFile();
-      const file = Bun.file(presetsFile);
-      const exists = await file.exists();
-      if (!exists) {
-        return [];
+      let text: string;
+      try {
+        text = await readFile(presetsFile, "utf-8");
+      } catch (err) {
+        if (
+          err &&
+          typeof err === "object" &&
+          "code" in err &&
+          err.code === "ENOENT"
+        ) {
+          return [];
+        }
+        throw err;
       }
-      const text = await file.text();
       const parsed = presetsFile.endsWith(".jsonc")
         ? parseJsonc(text)
         : JSON.parse(text);
@@ -117,7 +126,7 @@ export const savePreset = async (
       }
 
       const presetsFile = await getPresetsFile();
-      await Bun.write(presetsFile, JSON.stringify(presets, null, 2));
+      await writeFile(presetsFile, JSON.stringify(presets, null, 2));
     },
     catch: (cause) =>
       new PresetError({
@@ -139,7 +148,7 @@ export const deletePreset = async (
       const presets = presetsResult.value;
       const filtered = presets.filter((p) => p.name !== name);
       const presetsFile = await getPresetsFile();
-      await Bun.write(presetsFile, JSON.stringify(filtered, null, 2));
+      await writeFile(presetsFile, JSON.stringify(filtered, null, 2));
     },
     catch: (cause) =>
       new PresetError({

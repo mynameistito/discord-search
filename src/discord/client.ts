@@ -168,7 +168,7 @@ const handle429 = async (
   });
 
   if (bodyResult.isErr()) {
-    return bodyResult;
+    return Result.err(bodyResult.error);
   }
 
   const parsed = RateLimitBodySchema.safeParse(bodyResult.value);
@@ -237,7 +237,7 @@ const handle202 = async <T>(
 
     const retryResult = await fetchWithAuth(url, token);
     if (retryResult.isErr()) {
-      return retryResult;
+      return Result.err(retryResult.error);
     }
 
     const retryResponse = retryResult.value;
@@ -254,7 +254,7 @@ const handle202 = async <T>(
         maxRetries429
       );
       if (rateLimitResult.isErr()) {
-        return rateLimitResult;
+        return Result.err(rateLimitResult.error);
       }
       rateLimitCounter.value++;
       attempt--;
@@ -313,7 +313,7 @@ const parseResponse = async <T>(
   });
 
   if (jsonResult.isErr()) {
-    return jsonResult;
+    return Result.err(jsonResult.error);
   }
 
   const parsed = schema.safeParse(jsonResult.value);
@@ -347,7 +347,7 @@ export const discordFetch = async <T>(
 
     const fetchResult = await fetchWithAuth(url, token);
     if (fetchResult.isErr()) {
-      return fetchResult;
+      return Result.err(fetchResult.error);
     }
 
     const response = fetchResult.value;
@@ -360,7 +360,7 @@ export const discordFetch = async <T>(
         maxRetries429
       );
       if (result.isErr()) {
-        return result;
+        return Result.err(result.error);
       }
       continue;
     }

@@ -1,0 +1,23 @@
+.changeset/silver-mango-tornado.md
+  2339f1a27b04ac3c 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "610afc772b0636600a03c809340017e16c80f892",
+  "prompts": {
+    "2339f1a27b04ac3c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf2bd6d6-63c7-495e-8d3f-2f4919da8948",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Tito",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  }
+}

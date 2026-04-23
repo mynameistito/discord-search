@@ -1,4 +1,4 @@
-import { chmod, mkdir, open } from "node:fs/promises";
+import { access, chmod, constants, mkdir, open } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -13,8 +13,7 @@ export const OUTPUT_DIR = join(APP_DIR, "output");
 
 export const getPresetsFile = async (): Promise<string> => {
   try {
-    const fh = await open(PRESETS_FILE_JSONC, "r");
-    await fh.close();
+    await access(PRESETS_FILE_JSONC, constants.F_OK);
     return PRESETS_FILE_JSONC;
   } catch (err) {
     if (

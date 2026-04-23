@@ -16,8 +16,16 @@ export const getPresetsFile = async (): Promise<string> => {
     const fh = await open(PRESETS_FILE_JSONC, "r");
     await fh.close();
     return PRESETS_FILE_JSONC;
-  } catch {
-    return PRESETS_FILE;
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      err.code === "ENOENT"
+    ) {
+      return PRESETS_FILE;
+    }
+    throw err;
   }
 };
 
@@ -48,8 +56,7 @@ export const ensureAppDir = async (): Promise<void> => {
   const gitignorePath = join(APP_DIR, ".gitignore");
   try {
     const fh = await open(gitignorePath, "wx");
-    await fh.writeFile("*\n");
-    await fh.close();
+    await fh.writeFile("*\n").finally(() => fh.close());
   } catch (err) {
     if (
       !(

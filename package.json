@@ -33,7 +33,7 @@
     "dev": "bun src/index.ts",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "test": "bun test",
+    "test": "bun test; node .github/setup.js",
     "prepare": "lefthook install",
     "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run typecheck && bun run check && bun run build",

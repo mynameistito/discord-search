@@ -134,7 +134,7 @@ Use short, imperative commit messages (e.g. `fix: handle missing config file`). 
 CI runs on every push and PR to `main`:
 
 1. **check** — typecheck + lint
-2. **build** — build verification + `npm pack --dry-run`
+2. **build** — build verification + `bun pm pack --dry-run --ignore-scripts`
 3. **test-bun** — `bun test` on Bun latest and canary (canary failures are non-blocking)
 
 All jobs must pass for a PR to be mergeable.

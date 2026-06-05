@@ -28,14 +28,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@21eb7f7842f33eafc83782b56fff2a2c43e9696f # v4.36.1
+        uses: github/codeql-action/init@1a818fd5f97ed0ee9a823421bd5b171add01227f # v4.36.2
         with:
           languages: javascript-typescript
           queries: security-extended
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@21eb7f7842f33eafc83782b56fff2a2c43e9696f # v4.36.1
+        uses: github/codeql-action/autobuild@1a818fd5f97ed0ee9a823421bd5b171add01227f # v4.36.2
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@21eb7f7842f33eafc83782b56fff2a2c43e9696f # v4.36.1
+        uses: github/codeql-action/analyze@1a818fd5f97ed0ee9a823421bd5b171add01227f # v4.36.2
         with:
           category: "/language:javascript-typescript"

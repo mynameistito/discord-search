@@ -11,34 +11,42 @@ import type { Message } from "@/discord/schemas.ts";
 
 const formatTimestamp = (timestamp: string): string => {
   const date = new Date(timestamp);
+
   return date.toLocaleString([], {
-    year: "numeric",
-    month: "short",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit",
     hour12: false,
+    minute: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 };
 
 const formatMessagePreview = (msg: Message): string => {
-  const author = msg.author.bot
-    ? `${msg.author.username} [BOT]`
-    : msg.author.username;
+  const author =
+    msg.author.bot === true
+      ? `${msg.author.username} [BOT]`
+      : msg.author.username;
+
   const embedCount = msg.embeds?.length ?? 0;
   const attachCount = msg.attachments?.length ?? 0;
   const extras: string[] = [];
+
   if (embedCount > 0) {
     extras.push(`${embedCount} embed(s)`);
   }
+
   if (attachCount > 0) {
     extras.push(`${attachCount} attachment(s)`);
   }
+
   const suffix = extras.length > 0 ? ` [${extras.join(", ")}]` : "";
+
   const content =
     msg.content.length > 100
       ? `${msg.content.slice(0, 100)}...`
       : msg.content || "(no text content)";
+
   return `${ANSI_DIM}${formatTimestamp(msg.timestamp)}${ANSI_RESET} ${ANSI_CYAN}${author}${ANSI_RESET}: ${content}${suffix}`;
 };
 
@@ -57,19 +65,22 @@ const renderEmbedPreview = (msg: Message): void => {
   }
 
   for (const embed of msg.embeds) {
-    if (embed.title) {
+    if (embed.title !== undefined && embed.title.length > 0) {
       const title = truncate(embed.title, 80);
       process.stdout.write(`  Embed: ${title}\n`);
     }
-    if (embed.description) {
+
+    if (embed.description !== undefined && embed.description.length > 0) {
       const desc = truncate(embed.description, 200);
       process.stdout.write(`  ${ANSI_DIM}${desc}${ANSI_RESET}\n`);
     }
+
     if (embed.fields) {
       for (const field of embed.fields) {
         renderField(field);
       }
     }
+
     process.stdout.write("\n");
   }
 };
@@ -101,9 +112,13 @@ const write = (text: string): void => {
   process.stdout.write(text);
 };
 
+const pauseInput = (): void => {
+  process.stdin.pause();
+};
+
 const handleRenderError = (
-  err: unknown,
-  reject: (reason?: unknown) => void,
+  error: Error,
+  reject: (reason: Error) => void,
   cleanup: () => void
 ): void => {
   try {
@@ -111,20 +126,21 @@ const handleRenderError = (
   } catch {
     // Swallow cleanup errors to preserve original error
   }
-  reject(err);
+
+  reject(error);
 };
 
 const handleQuit = (
   cleanup: () => void,
   resolve: () => void,
-  reject: (reason?: unknown) => void
+  reject: (reason: Error) => void
 ): void => {
   try {
     cleanup();
     write(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
     resolve();
-  } catch (err) {
-    reject(err);
+  } catch (error) {
+    reject(error instanceof Error ? error : new Error(String(error)));
   }
 };
 
@@ -133,65 +149,85 @@ const navigate = (
   state: { index: number; viewMode: "preview" | "json" },
   total: number
 ): void => {
-  if (key === "j" || key === "\x1b[B") {
+  if (key === "j" || key === "\u001B[B") {
     state.index = Math.min(state.index + 1, total - 1);
-  } else if (key === "k" || key === "\x1b[A") {
+  } else if (key === "k" || key === "\u001B[A") {
     state.index = Math.max(state.index - 1, 0);
   } else if (key === "v") {
     state.viewMode = state.viewMode === "preview" ? "json" : "preview";
   }
 };
 
-export const browseMessages = (messages: Message[]): Promise<void> => {
+/** Browse search results in an interactive terminal viewer.
+ *
+ * @param messages - The messages to browse.
+ * @returns A promise that resolves when the viewer closes.
+ */
+export const browseMessages = async (messages: Message[]): Promise<void> => {
   if (!process.stdin.isTTY) {
     write("Interactive browsing requires a TTY terminal.\n");
-    return Promise.resolve();
+
+    return;
   }
 
-  return new Promise((resolve, reject) => {
-    if (messages.length === 0) {
-      try {
-        write(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
-        resolve();
-      } catch (err) {
-        reject(err);
-      }
+  const { promise, resolve, reject } = Promise.withResolvers<boolean>();
+
+  if (messages.length === 0) {
+    write(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
+
+    return;
+  }
+
+  const state = { index: 0, viewMode: "preview" as const };
+
+  let cleanup = pauseInput;
+
+  const render = (): boolean => {
+    const msg = messages[state.index];
+
+    if (!msg) {
+      return true;
+    }
+
+    try {
+      renderMessageView(msg, state.index, messages.length, state.viewMode);
+
+      return true;
+    } catch (error) {
+      handleRenderError(
+        error instanceof Error ? error : new Error(String(error)),
+        reject,
+        cleanup
+      );
+
+      return false;
+    }
+  };
+
+  const renderSucceeded = render();
+
+  if (!renderSucceeded) {
+    await promise;
+
+    return;
+  }
+
+  cleanup = createKeyListener((key) => {
+    if (key === "q" || key === "\u001B") {
+      handleQuit(
+        cleanup,
+        () => {
+          resolve(true);
+        },
+        reject
+      );
+
       return;
     }
 
-    const state = { index: 0, viewMode: "preview" as const };
-
-    let cleanup: () => void = () => {
-      // No-op initially, replaced by actual cleanup after first render
-    };
-
-    const render = (): boolean => {
-      const msg = messages[state.index];
-      if (!msg) {
-        return true;
-      }
-      try {
-        renderMessageView(msg, state.index, messages.length, state.viewMode);
-        return true;
-      } catch (err) {
-        handleRenderError(err, reject, cleanup);
-        return false;
-      }
-    };
-
-    const renderSucceeded = render();
-    if (!renderSucceeded) {
-      return;
-    }
-
-    cleanup = createKeyListener((key) => {
-      if (key === "q" || key === "\x1b") {
-        handleQuit(cleanup, resolve, reject);
-        return;
-      }
-
-      navigate(key, state, messages.length);
-      render();
-    });
+    navigate(key, state, messages.length);
+    render();
   });
+
+  await promise;
 };

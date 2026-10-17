@@ -1,16 +1,25 @@
 import { z } from "zod";
+
 import { SearchParamsSchema } from "@/discord/schemas.ts";
+
+const EXPORT_FORMATS = [
+  "json",
+  "csv-messages",
+  "csv-embeds",
+  "csv-fields",
+  "all",
+] as const;
 
 export const GlobalFlagsSchema = z.object({
   help: z.boolean(),
-  version: z.boolean(),
   token: z.string().optional(),
+  version: z.boolean(),
 });
 
 export const InteractiveArgsSchema = GlobalFlagsSchema.extend({
+  clientId: z.string().optional(),
   command: z.literal("interactive"),
   guild: z.string().optional(),
-  clientId: z.string().optional(),
 });
 
 export const HelpArgsSchema = GlobalFlagsSchema.extend({
@@ -20,71 +29,65 @@ export const HelpArgsSchema = GlobalFlagsSchema.extend({
 
 export const SearchArgsSchema = GlobalFlagsSchema.extend({
   command: z.literal("search"),
-  params: SearchParamsSchema,
-  export: z
-    .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
-    .optional(),
-  outputDir: z.string().optional(),
+  export: z.enum(EXPORT_FORMATS).optional(),
   json: z.boolean(),
+  outputDir: z.string().optional(),
+  params: SearchParamsSchema,
   savePreset: z.string().optional(),
 });
 
 export const PresetListArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("preset"),
   action: z.literal("list"),
+  command: z.literal("preset"),
 });
 
 export const PresetRunArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("preset"),
   action: z.literal("run"),
-  name: z.string(),
-  export: z
-    .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
-    .optional(),
-  outputDir: z.string().optional(),
+  command: z.literal("preset"),
+  export: z.enum(EXPORT_FORMATS).optional(),
   json: z.boolean(),
+  name: z.string(),
+  outputDir: z.string().optional(),
 });
 
 export const PresetRunAllArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("preset"),
   action: z.literal("run-all"),
-  names: z.array(z.string()),
   all: z.boolean(),
-  export: z
-    .enum(["json", "csv-messages", "csv-embeds", "csv-fields", "all"])
-    .optional(),
+  command: z.literal("preset"),
+  export: z.enum(EXPORT_FORMATS).optional(),
+  names: z.array(z.string()),
   outputDir: z.string().optional(),
 });
 
 export const PresetSaveArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("preset"),
   action: z.literal("save"),
+  command: z.literal("preset"),
   name: z.string(),
   params: SearchParamsSchema,
 });
 
 export const PresetDeleteArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("preset"),
   action: z.literal("delete"),
+  command: z.literal("preset"),
   name: z.string(),
 });
 
 export const SettingsShowArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("settings"),
   action: z.literal("show"),
+  command: z.literal("settings"),
 });
 
 export const SettingsSetArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("settings"),
   action: z.literal("set"),
+  command: z.literal("settings"),
   key: z.enum(["token", "client-id", "guild"]),
   value: z.string(),
 });
 
 export const SettingsInviteArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("settings"),
   action: z.literal("invite"),
   clientId: z.string().optional(),
+  command: z.literal("settings"),
 });
 
 export const PresetArgsSchema = z.discriminatedUnion("action", [
@@ -109,16 +112,41 @@ export const ParsedArgsSchema = z.union([
   SettingsArgsSchema,
 ]);
 
+/** Global options accepted by CLI commands. */
 export type GlobalFlags = z.infer<typeof GlobalFlagsSchema>;
+
+/** Arguments for launching the interactive interface. */
 export type InteractiveArgs = z.infer<typeof InteractiveArgsSchema>;
+
+/** Arguments for displaying general or subcommand help. */
 export type HelpArgs = z.infer<typeof HelpArgsSchema>;
+
+/** Arguments for a message search command. */
 export type SearchArgs = z.infer<typeof SearchArgsSchema>;
+
+/** Arguments for listing saved presets. */
 export type PresetListArgs = z.infer<typeof PresetListArgsSchema>;
+
+/** Arguments for running one saved preset. */
 export type PresetRunArgs = z.infer<typeof PresetRunArgsSchema>;
+
+/** Arguments for running multiple saved presets. */
 export type PresetRunAllArgs = z.infer<typeof PresetRunAllArgsSchema>;
+
+/** Arguments for saving a new preset. */
 export type PresetSaveArgs = z.infer<typeof PresetSaveArgsSchema>;
+
+/** Arguments for deleting a saved preset. */
 export type PresetDeleteArgs = z.infer<typeof PresetDeleteArgsSchema>;
+
+/** Arguments for displaying settings. */
 export type SettingsShowArgs = z.infer<typeof SettingsShowArgsSchema>;
+
+/** Arguments for updating a setting. */
 export type SettingsSetArgs = z.infer<typeof SettingsSetArgsSchema>;
+
+/** Arguments for generating a bot invite URL. */
 export type SettingsInviteArgs = z.infer<typeof SettingsInviteArgsSchema>;
+
+/** Any valid parsed CLI command. */
 export type ParsedArgs = z.infer<typeof ParsedArgsSchema>;

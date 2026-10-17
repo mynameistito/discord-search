@@ -1,5 +1,7 @@
 import { writeFile } from "node:fs/promises";
+
 import { Result } from "better-result";
+
 import type { CollatedData } from "@/collate.ts";
 import { ExportError } from "@/errors.ts";
 
@@ -10,47 +12,69 @@ const escapeCsvField = (value: string): string => {
     value.includes("\n") ||
     value.includes("\r")
   ) {
-    return `"${value.replace(/"/g, '""')}"`;
+    return `"${value.replaceAll('"', '""')}"`;
   }
+
   return value;
 };
 
 const toCsvRow = (fields: string[]): string =>
   fields.map(escapeCsvField).join(",");
 
+/**
+ * Export collated search data as a formatted JSON file.
+ *
+ * @param data - Collated search results.
+ * @param filePath - Destination file path.
+ * @returns Success or an export error.
+ */
 export const exportJson = async (
   data: CollatedData,
   filePath: string
 ): Promise<Result<void, ExportError>> =>
   await Result.tryPromise({
-    try: async () => {
-      const { messages: _messages, ...summary } = data;
-      const output = {
-        ...summary,
-        messages: data.messages.map((msg) => ({
-          id: msg.id,
-          channel_id: msg.channel_id,
-          author: msg.author,
-          content: msg.content,
-          timestamp: msg.timestamp,
-          embeds: msg.embeds,
-          attachments: msg.attachments,
-        })),
-      };
-      await writeFile(filePath, JSON.stringify(output, null, 2));
-    },
     catch: (cause) =>
       new ExportError({
-        message: `Failed to export JSON: ${cause instanceof Error ? cause.message : String(cause)}`,
         cause,
+        message: `Failed to export JSON: ${cause instanceof Error ? cause.message : String(cause)}`,
       }),
+    try: async () => {
+      const { messages, ...summary } = data;
+
+      const output = {
+        ...summary,
+        messages: messages.map((msg) => ({
+          attachments: msg.attachments,
+          author: msg.author,
+          channel_id: msg.channel_id,
+          content: msg.content,
+          embeds: msg.embeds,
+          id: msg.id,
+          timestamp: msg.timestamp,
+        })),
+      };
+
+      await writeFile(filePath, JSON.stringify(output, null, 2));
+    },
   });
 
+/**
+ * Export messages as a CSV file.
+ *
+ * @param data - Collated search results.
+ * @param filePath - Destination file path.
+ * @returns Success or an export error.
+ */
 export const exportMessagesCsv = async (
   data: CollatedData,
   filePath: string
 ): Promise<Result<void, ExportError>> =>
   await Result.tryPromise({
+    catch: (cause) =>
+      new ExportError({
+        cause,
+        message: `Failed to export messages CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
     try: async () => {
       const headers = [
         "message_id",
@@ -84,18 +108,25 @@ export const exportMessagesCsv = async (
 
       await writeFile(filePath, `${rows.join("\n")}\n`);
     },
-    catch: (cause) =>
-      new ExportError({
-        message: `Failed to export messages CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
-        cause,
-      }),
   });
 
+/**
+ * Export embeds as a CSV file.
+ *
+ * @param data - Collated search results.
+ * @param filePath - Destination file path.
+ * @returns Success or an export error.
+ */
 export const exportEmbedsCsv = async (
   data: CollatedData,
   filePath: string
 ): Promise<Result<void, ExportError>> =>
   await Result.tryPromise({
+    catch: (cause) =>
+      new ExportError({
+        cause,
+        message: `Failed to export embeds CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
     try: async () => {
       const headers = [
         "message_id",
@@ -135,28 +166,36 @@ export const exportEmbedsCsv = async (
 
       await writeFile(filePath, `${rows.join("\n")}\n`);
     },
-    catch: (cause) =>
-      new ExportError({
-        message: `Failed to export embeds CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
-        cause,
-      }),
   });
 
+/**
+ * Export extracted embed fields as a CSV file.
+ *
+ * @param data - Collated search results.
+ * @param filePath - Destination file path.
+ * @returns Success or an export error.
+ */
 export const exportFieldsCsv = async (
   data: CollatedData,
   filePath: string
-): Promise<Result<void, ExportError>> => {
-  return await Result.tryPromise({
+): Promise<Result<void, ExportError>> =>
+  await Result.tryPromise({
+    catch: (cause) =>
+      new ExportError({
+        cause,
+        message: `Failed to export fields CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
     try: async () => {
       // Collect all unique field names across all extracted fields
       const fieldNames = new Set<string>();
+
       for (const row of data.extractedFields) {
         for (const name of Object.keys(row.fields)) {
           fieldNames.add(name);
         }
       }
 
-      const sortedFieldNames = [...fieldNames].sort();
+      const sortedFieldNames = [...fieldNames].toSorted();
 
       const headers = [
         "message_id",
@@ -184,10 +223,4 @@ export const exportFieldsCsv = async (
 
       await writeFile(filePath, `${rows.join("\n")}\n`);
     },
-    catch: (cause) =>
-      new ExportError({
-        message: `Failed to export fields CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
-        cause,
-      }),
   });
-};

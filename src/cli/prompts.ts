@@ -7,200 +7,338 @@ import {
   select,
   text,
 } from "@clack/prompts";
-import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
-import { type SearchParams, SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
+import { z } from "zod";
 
-export function handleCancel<T>(value: T | symbol): asserts value is T {
-  if (isCancel(value)) {
-    cancel("Search cancelled.");
+import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
+import { SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
+import type { SearchParams } from "@/discord/schemas.ts";
+
+const VALID_CONTENT_FILTERS = new Set([
+  "embed",
+  "file",
+  "image",
+  "link",
+  "poll",
+  "snapshot",
+  "sound",
+  "sticker",
+  "video",
+]);
+
+const INVALID_INTEGER_MESSAGE = "Must be a number";
+
+const PROMPT_CANCEL_MESSAGE = "Search cancelled.";
+
+const parsePromptResult = <Input, Schema extends z.ZodType<Input>>(
+  input: Input | symbol,
+  schema: Schema
+): z.infer<Schema> => {
+  if (isCancel(input)) {
+    cancel(PROMPT_CANCEL_MESSAGE);
     process.exit(0);
   }
-}
 
-export const promptForToken = async (): Promise<string> => {
-  const token = await password({
-    message: "Enter your Discord Bot Token:",
-    validate: (v) => (v?.trim() ? undefined : "Token cannot be empty"),
-  });
-  handleCancel(token);
-  return token as string;
+  return schema.parse(input);
 };
 
+/**
+ * Exit the process when a Clack prompt is cancelled.
+ *
+ * @param value - The prompt result or Clack's cancellation symbol.
+ */
+export const handleCancel: CancelPrompt = <T>(
+  value: T | symbol
+): asserts value is T => {
+  if (isCancel(value)) {
+    cancel(PROMPT_CANCEL_MESSAGE);
+    process.exit(0);
+  }
+};
+
+const textResultSchema = z.string();
+
+/** Parse a text-prompt result, terminating cleanly on cancellation.
+ *
+ * @param input - Text prompt response or Clack's cancellation symbol.
+ * @returns The validated prompt text.
+ */
+export const parseTextPrompt = (input: string | symbol): string =>
+  parsePromptResult(input, textResultSchema);
+
+const booleanResultSchema = z.boolean();
+
+/** Parse a confirmation result, terminating cleanly on cancellation.
+ *
+ * @param input - Confirmation response or Clack's cancellation symbol.
+ * @returns The validated confirmation value.
+ */
+export const parseBooleanPrompt = (input: boolean | symbol): boolean =>
+  parsePromptResult(input, booleanResultSchema);
+
+const authorTypesSchema = z.array(z.enum(["user", "bot", "webhook"]));
+
+const contentFiltersSchema = z.array(
+  z.enum([
+    "embed",
+    "file",
+    "image",
+    "link",
+    "poll",
+    "snapshot",
+    "sound",
+    "sticker",
+    "video",
+  ])
+);
+
+const sortBySchema = z.enum(["timestamp", "relevance"]);
+
+const sortOrderSchema = z.enum(["desc", "asc"]);
+
+type CancelPrompt = <T>(value: T | symbol) => asserts value is T;
+
+/**
+ * Prompt for a Discord bot token.
+ *
+ * @returns The entered bot token.
+ */
+export const promptForToken = async (): Promise<string> =>
+  parsePromptResult(
+    await password({
+      message: "Enter your Discord Bot Token:",
+      validate: (value) =>
+        value?.trim().length !== undefined && value.trim().length > 0
+          ? undefined
+          : "Token cannot be empty",
+    }),
+    textResultSchema
+  );
+
+/**
+ * Prompt for Discord search parameters.
+ *
+ * @param defaultGuildId - Optional guild ID to prefill.
+ * @returns The validated search parameters.
+ */
 export const promptForSearchParams = async (
   defaultGuildId?: string
 ): Promise<SearchParams> => {
-  const guildId = await text({
-    message: "Guild (Server) ID:",
-    initialValue: defaultGuildId,
-    validate: (v) => {
-      const trimmed = v?.trim();
-      if (!trimmed) {
-        return "Guild ID is required";
-      }
-      if (!SNOWFLAKE_REGEX.test(trimmed)) {
-        return "Guild ID must be a 17–20 digit Discord snowflake";
-      }
-    },
-  });
-  handleCancel(guildId);
+  const guildId = parsePromptResult(
+    await text({
+      initialValue: defaultGuildId,
+      message: "Guild (Server) ID:",
+      validate: (v) => {
+        const trimmed = v?.trim() ?? "";
 
-  const content = await text({
-    message: "Content filter (leave empty for all):",
-    placeholder: "search text...",
-  });
-  handleCancel(content);
+        if (trimmed.length === 0) {
+          return "Guild ID is required";
+        }
 
-  const authorIds = await text({
-    message: "Author IDs (comma-separated, leave empty for all):",
-    placeholder: "123456789,987654321",
-  });
-  handleCancel(authorIds);
+        return SNOWFLAKE_REGEX.test(trimmed)
+          ? undefined
+          : "Guild ID must be a 17–20 digit Discord snowflake";
+      },
+    }),
+    textResultSchema
+  );
 
-  const filterByAuthorType = await confirm({
-    message: "Filter by author type?",
-    initialValue: false,
-  });
-  handleCancel(filterByAuthorType);
+  const content = parsePromptResult(
+    await text({
+      message: "Content filter (leave empty for all):",
+      placeholder: "search text...",
+    }),
+    textResultSchema
+  );
 
-  let authorType: string[] | undefined;
+  const authorIds = parsePromptResult(
+    await text({
+      message: "Author IDs (comma-separated, leave empty for all):",
+      placeholder: "123456789,987654321",
+    }),
+    textResultSchema
+  );
+
+  const filterByAuthorType = parsePromptResult(
+    await confirm({
+      initialValue: false,
+      message: "Filter by author type?",
+    }),
+    booleanResultSchema
+  );
+
+  let authorType: ("user" | "bot" | "webhook")[] | undefined;
+
   if (filterByAuthorType) {
-    const selected = await multiselect({
-      message: "Author type:",
-      options: [
-        { value: "user", label: "Users" },
-        { value: "bot", label: "Bots" },
-        { value: "webhook", label: "Webhooks" },
-      ],
-      required: false,
-    });
-    handleCancel(selected);
-    const selectedArray = selected as string[] | undefined;
-    if (selectedArray && selectedArray.length > 0) {
-      authorType = selectedArray as ("user" | "bot" | "webhook")[];
+    const selected = parsePromptResult(
+      await multiselect({
+        message: "Author type:",
+        options: [
+          { label: "Users", value: "user" },
+          { label: "Bots", value: "bot" },
+          { label: "Webhooks", value: "webhook" },
+        ],
+        required: false,
+      }),
+      authorTypesSchema
+    );
+
+    if (selected.length > 0) {
+      authorType = selected.filter(
+        (value): value is "user" | "bot" | "webhook" =>
+          value === "user" || value === "bot" || value === "webhook"
+      );
     }
   }
 
-  const mentionIds = await text({
-    message: "Mentions user IDs (comma-separated, leave empty to skip):",
-    placeholder: "123456789",
-  });
-  handleCancel(mentionIds);
+  const mentionIds = parsePromptResult(
+    await text({
+      message: "Mentions user IDs (comma-separated, leave empty to skip):",
+      placeholder: "123456789",
+    }),
+    textResultSchema
+  );
 
-  const channelIds = await text({
-    message: "Channel IDs (comma-separated, leave empty for all):",
-    placeholder: "123456789,987654321",
-  });
-  handleCancel(channelIds);
+  const channelIds = parsePromptResult(
+    await text({
+      message: "Channel IDs (comma-separated, leave empty for all):",
+      placeholder: "123456789,987654321",
+    }),
+    textResultSchema
+  );
 
-  const hasFilter = await multiselect({
-    message: "Has content type (select none to skip):",
-    options: [
-      { value: "embed", label: "Embed" },
-      { value: "image", label: "Image" },
-      { value: "video", label: "Video" },
-      { value: "file", label: "File" },
-      { value: "link", label: "Link" },
-      { value: "sticker", label: "Sticker" },
-      { value: "sound", label: "Sound" },
-      { value: "poll", label: "Poll" },
-      { value: "snapshot", label: "Snapshot" },
-    ],
-    required: false,
-  });
-  handleCancel(hasFilter);
+  const hasFilter = parsePromptResult(
+    await multiselect({
+      message: "Has content type (select none to skip):",
+      options: [
+        { label: "Embed", value: "embed" },
+        { label: "Image", value: "image" },
+        { label: "Video", value: "video" },
+        { label: "File", value: "file" },
+        { label: "Link", value: "link" },
+        { label: "Sticker", value: "sticker" },
+        { label: "Sound", value: "sound" },
+        { label: "Poll", value: "poll" },
+        { label: "Snapshot", value: "snapshot" },
+      ],
+      required: false,
+    }),
+    contentFiltersSchema
+  );
 
-  const sortBy = await select({
-    message: "Sort by:",
-    options: [
-      { value: "timestamp", label: "Timestamp" },
-      { value: "relevance", label: "Relevance" },
-    ],
-  });
-  handleCancel(sortBy);
+  const sortBy = parsePromptResult(
+    await select({
+      message: "Sort by:",
+      options: [
+        { label: "Timestamp", value: "timestamp" },
+        { label: "Relevance", value: "relevance" },
+      ],
+    }),
+    sortBySchema
+  );
 
-  const sortOrder = await select({
-    message: "Sort order:",
-    options: [
-      { value: "desc", label: "Newest first" },
-      { value: "asc", label: "Oldest first" },
-    ],
-  });
-  handleCancel(sortOrder);
+  const sortOrder = parsePromptResult(
+    await select({
+      message: "Sort order:",
+      options: [
+        { label: "Newest first", value: "desc" },
+        { label: "Oldest first", value: "asc" },
+      ],
+    }),
+    sortOrderSchema
+  );
 
-  const includeNsfw = await confirm({
-    message: "Include NSFW channels?",
-    initialValue: false,
-  });
-  handleCancel(includeNsfw);
+  const includeNsfw = parsePromptResult(
+    await confirm({
+      initialValue: false,
+      message: "Include NSFW channels?",
+    }),
+    booleanResultSchema
+  );
 
-  const limitInput = await text({
-    message: "Max messages to fetch (leave empty for all):",
-    placeholder: "e.g. 100",
-    validate: (v) => {
-      const trimmed = v?.trim();
-      if (trimmed && !INTEGER_REGEX.test(trimmed)) {
-        return "Must be a number";
-      }
-    },
-  });
-  handleCancel(limitInput);
+  const limitInput = parsePromptResult(
+    await text({
+      message: "Max messages to fetch (leave empty for all):",
+      placeholder: "e.g. 100",
+      validate: (v) => {
+        const trimmed = v?.trim() ?? "";
 
-  const offsetInput = await text({
-    message: "Offset / skip first N results (leave empty for 0):",
-    placeholder: "e.g. 50",
-    validate: (v) => {
-      const trimmed = v?.trim();
-      if (trimmed && !INTEGER_REGEX.test(trimmed)) {
-        return "Must be a number";
-      }
-    },
-  });
-  handleCancel(offsetInput);
+        return trimmed.length > 0 && !INTEGER_REGEX.test(trimmed)
+          ? INVALID_INTEGER_MESSAGE
+          : undefined;
+      },
+    }),
+    textResultSchema
+  );
+
+  const offsetInput = parsePromptResult(
+    await text({
+      message: "Offset / skip first N results (leave empty for 0):",
+      placeholder: "e.g. 50",
+      validate: (v) => {
+        const trimmed = v?.trim() ?? "";
+
+        return trimmed.length > 0 && !INTEGER_REGEX.test(trimmed)
+          ? INVALID_INTEGER_MESSAGE
+          : undefined;
+      },
+    }),
+    textResultSchema
+  );
 
   const params: SearchParams = {
-    guildId: (guildId as string).trim(),
-    sortBy: sortBy as "timestamp" | "relevance",
-    sortOrder: sortOrder as "asc" | "desc",
-    includeNsfw: includeNsfw as boolean,
+    guildId: guildId.trim(),
+    includeNsfw,
+    sortBy,
+    sortOrder,
   };
 
-  const contentStr = (content as string).trim();
+  const contentStr = content.trim();
+
   if (contentStr) {
     params.content = contentStr;
   }
 
-  const authorIdList = parseCommaSeparated(authorIds as string);
+  const authorIdList = parseCommaSeparated(authorIds);
+
   if (authorIdList && authorIdList.length > 0) {
     params.authorId = authorIdList;
   }
 
   if (authorType) {
-    params.authorType = authorType as ("user" | "bot" | "webhook")[];
+    params.authorType = authorType;
   }
 
-  const mentionList = parseCommaSeparated(mentionIds as string);
+  const mentionList = parseCommaSeparated(mentionIds);
+
   if (mentionList && mentionList.length > 0) {
     params.mentions = mentionList;
   }
 
-  const channelList = parseCommaSeparated(channelIds as string);
+  const channelList = parseCommaSeparated(channelIds);
+
   if (channelList && channelList.length > 0) {
     params.channelId = channelList;
   }
 
-  const hasFilterArr = hasFilter as string[];
+  const hasFilterArr = hasFilter;
+
   if (hasFilterArr.length > 0) {
-    params.has = hasFilterArr as SearchParams["has"];
+    params.has = hasFilterArr.filter(
+      (filter): filter is NonNullable<SearchParams["has"]>[number] =>
+        VALID_CONTENT_FILTERS.has(filter)
+    );
   }
 
-  const limitStr = (limitInput as string).trim();
-  if (limitStr) {
-    params.limit = Number.parseInt(limitStr, 10);
+  const limitStr = limitInput.trim();
+
+  if (limitStr.length > 0) {
+    params.limit = Math.trunc(Number(limitStr));
   }
 
-  const offsetStr = (offsetInput as string).trim();
-  if (offsetStr) {
-    params.offset = Number.parseInt(offsetStr, 10);
+  const offsetStr = offsetInput.trim();
+
+  if (offsetStr.length > 0) {
+    params.offset = Math.trunc(Number(offsetStr));
   }
 
   return params;

@@ -2,12 +2,37 @@
   "name": "discord-search",
   "version": "0.1.0",
   "description": "Search Discord server messages from your terminal. Filter by author, content type, mentions, and more.",
-  "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
+  "keywords": [
+    "bun",
+    "cli",
+    "discord",
+    "discord-api",
+    "search",
+    "terminal"
+  ],
+  "homepage": "https://github.com/mynameistito/discord-search#readme",
+  "bugs": {
+    "url": "https://github.com/mynameistito/discord-search/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "mynameistito",
+    "email": "github@mynameistito.com",
+    "url": "https://mynameistito.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mynameistito/discord-search.git"
+  },
   "bin": {
     "discord-search": "dist/index.mjs"
   },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": {
       "import": {
@@ -20,47 +45,20 @@
       }
     }
   },
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=18.0.0",
-    "bun": ">=1.0.0"
+  "publishConfig": {
+    "access": "public"
   },
-  "packageManager": "bun@1.3.11",
   "scripts": {
     "build": "tsdown",
     "dev": "bun src/index.ts",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "test": "bun test",
+    "test": "vitest run",
     "prepare": "lefthook install",
-    "typecheck": "tsgo --noEmit",
+    "typecheck": "tsc6 --noEmit",
     "prepublishOnly": "bun run typecheck && bun run check && bun run build",
     "version": "changeset version",
     "release": "changeset publish"
-  },
-  "keywords": [
-    "discord",
-    "cli",
-    "search",
-    "terminal",
-    "discord-api",
-    "bun"
-  ],
-  "author": {
-    "name": "mynameistito",
-    "email": "github@mynameistito.com",
-    "url": "https://mynameistito.com"
-  },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mynameistito/discord-search.git"
-  },
-  "homepage": "https://github.com/mynameistito/discord-search#readme",
-  "bugs": {
-    "url": "https://github.com/mynameistito/discord-search/issues"
   },
   "dependencies": {
     "@clack/prompts": "^1.8.1",
@@ -68,16 +66,25 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
     "@changesets/cli": "^3.0.3",
-    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "@types/bun": "^1.4.3",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "eslint-plugin-github": "6.1.2",
+    "eslint-plugin-jsdoc": "^65.1.0",
+    "eslint-plugin-sonarjs": "^4.2.2",
+    "eslint-plugin-tsdoc": "^0.5.4",
     "lefthook": "^2.2.2",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "oxlint-tsgolint": "^7.0.2004",
     "tsdown": "^0.23.1",
-    "typescript": "^7.0.2",
-    "ultracite": "8.0.1"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "ultracite": "8.0.1",
+    "vitest": "^5.0.5"
   },
-  "publishConfig": {
-    "access": "public"
-  }
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "packageManager": "bun@1.4.3"
 }

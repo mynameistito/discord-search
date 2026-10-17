@@ -1,23 +1,26 @@
 import type { Embed, Message } from "@/discord/schemas.ts";
 
-export type FlattenedEmbed = {
+/** An embed paired with the message and author it came from. */
+export interface FlattenedEmbed {
   channelId: string;
   embed: Embed;
   messageAuthor: { id: string; username: string; bot?: boolean };
   messageId: string;
   messageTimestamp: string;
-};
+}
 
-export type ExtractedFieldRow = {
+/** Extracted embed fields with their originating message metadata. */
+export interface ExtractedFieldRow {
   channelId: string;
   embedDescription: string | null;
   embedTitle: string | null;
   fields: Record<string, string>;
   messageId: string;
   messageTimestamp: string;
-};
+}
 
-export type CollatedData = {
+/** Aggregated messages, embeds, and author/channel statistics. */
+export interface CollatedData {
   byAuthor: Record<string, { count: number; username: string; bot?: boolean }>;
   byChannel: Record<string, number>;
   embeds: FlattenedEmbed[];
@@ -29,7 +32,7 @@ export type CollatedData = {
   messages: Message[];
   totalEmbeds: number;
   totalMessages: number;
-};
+}
 
 const extractDomain = (url: string): string | null => {
   try {
@@ -44,19 +47,22 @@ const increment = (record: Record<string, number>, key: string): void => {
 };
 
 const processEmbed = (embed: Embed, data: CollatedData): void => {
-  if (embed.type) {
+  if (embed.type !== undefined && embed.type.length > 0) {
     increment(data.embedsByType, embed.type);
   }
-  if (embed.provider?.name) {
+
+  if (embed.provider?.name !== undefined && embed.provider.name.length > 0) {
     increment(data.embedsByProvider, embed.provider.name);
   }
-  if (embed.author?.name) {
+
+  if (embed.author?.name !== undefined && embed.author.name.length > 0) {
     increment(data.embedsByAuthor, embed.author.name);
   }
 
-  if (embed.url) {
+  if (embed.url !== undefined && embed.url.length > 0) {
     const domain = extractDomain(embed.url);
-    if (domain) {
+
+    if (domain !== null) {
       increment(data.embedsByDomain, domain);
     }
   }
@@ -72,17 +78,18 @@ const extractFields = (
   }
 
   const fields: Record<string, string> = {};
+
   for (const field of embed.fields) {
     fields[field.name] = field.value;
   }
 
   data.extractedFields.push({
-    messageId: msg.id,
     channelId: msg.channel_id,
-    messageTimestamp: msg.timestamp,
-    embedTitle: embed.title ?? null,
     embedDescription: embed.description ?? null,
+    embedTitle: embed.title ?? null,
     fields,
+    messageId: msg.id,
+    messageTimestamp: msg.timestamp,
   });
 };
 
@@ -90,13 +97,14 @@ const processMessage = (msg: Message, data: CollatedData): void => {
   increment(data.byChannel, msg.channel_id);
 
   const authorEntry = data.byAuthor[msg.author.id];
+
   if (authorEntry) {
-    authorEntry.count++;
+    authorEntry.count += 1;
   } else {
     data.byAuthor[msg.author.id] = {
+      bot: msg.author.bot,
       count: 1,
       username: msg.author.username,
-      bot: msg.author.bot,
     };
   }
 
@@ -105,15 +113,15 @@ const processMessage = (msg: Message, data: CollatedData): void => {
 
   for (const embed of embeds) {
     data.embeds.push({
-      messageId: msg.id,
       channelId: msg.channel_id,
-      messageTimestamp: msg.timestamp,
+      embed,
       messageAuthor: {
+        bot: msg.author.bot,
         id: msg.author.id,
         username: msg.author.username,
-        bot: msg.author.bot,
       },
-      embed,
+      messageId: msg.id,
+      messageTimestamp: msg.timestamp,
     });
 
     processEmbed(embed, data);
@@ -121,19 +129,25 @@ const processMessage = (msg: Message, data: CollatedData): void => {
   }
 };
 
+/**
+ * Aggregate messages into export and summary data.
+ *
+ * @param messages - Messages returned by Discord search.
+ * @returns Collated counts and rows for the supplied messages.
+ */
 export const collateResults = (messages: Message[]): CollatedData => {
   const data: CollatedData = {
-    totalMessages: messages.length,
-    byChannel: {},
     byAuthor: {},
-    totalEmbeds: 0,
-    embedsByType: {},
-    embedsByProvider: {},
-    embedsByDomain: {},
-    embedsByAuthor: {},
-    messages,
+    byChannel: {},
     embeds: [],
+    embedsByAuthor: {},
+    embedsByDomain: {},
+    embedsByProvider: {},
+    embedsByType: {},
     extractedFields: [],
+    messages,
+    totalEmbeds: 0,
+    totalMessages: messages.length,
   };
 
   for (const msg of messages) {

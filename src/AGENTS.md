@@ -1,9 +1,11 @@
 # Source Code: Core Application Logic
 
 ## OVERVIEW
+
 CLI application for Discord message search with config management, preset CRUD, and export functionality.
 
 ## WHERE TO LOOK
+
 - **Types**: types.ts - AppState type definition
 - **Config**: config.ts:loadConfig() - Settings persistence, env vars, invite link generation
 - **Errors**: errors.ts - TaggedError classes (ConfigError, DiscordApiError, RateLimitExhaustedError)
@@ -14,6 +16,7 @@ CLI application for Discord message search with config management, preset CRUD, 
 - **File System**: paths.ts - Directory creation, path resolution
 
 ## CONVENTIONS
+
 - Use `type` keyword exclusively, never `interface`
 - Error handling via TaggedError pattern with descriptive error tags
 - All async operations use `async/await` with proper error propagation
@@ -21,6 +24,7 @@ CLI application for Discord message search with config management, preset CRUD, 
 - State management through config.ts:loadConfig()/saveConfig()
 
 ## ANTI-PATTERNS
+
 - Never use `any`, prefer `unknown` for untyped data
 - Don't modify global rate limit state directly, use Discord client
 - Avoid spread operators in loop accumulators (violates Ultracite performance rules)

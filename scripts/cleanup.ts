@@ -7,9 +7,10 @@
 
 import type { Dirent } from "node:fs";
 import { readdir, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import path from "node:path";
 
-const TARGET_PATTERNS = [/^tmpclaude-/, /^nul$/];
+const TARGET_PATTERNS = [/^tmpclaude-/u, /^nul$/u];
+
 const SKIP_DIRS = new Set([
   "node_modules",
   ".git",
@@ -25,73 +26,61 @@ const SKIP_DIRS = new Set([
   "build-output",
 ]);
 
-function shouldDeleteFile(filename: string): boolean {
-  return TARGET_PATTERNS.some((pattern) => pattern.test(filename));
-}
+const shouldDeleteFile = (filename: string): boolean =>
+  TARGET_PATTERNS.some((pattern) => pattern.test(filename));
 
-function shouldSkipDir(dirname: string): boolean {
-  return SKIP_DIRS.has(dirname);
-}
+const shouldSkipDir = (dirname: string): boolean => SKIP_DIRS.has(dirname);
 
-function isFileNotFoundError(error: unknown): error is { code: string } {
-  return Boolean(
-    error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as { code: unknown }).code === "ENOENT"
-  );
-}
+const isFileNotFoundError = (error: unknown): error is NodeJS.ErrnoException =>
+  error instanceof Error && "code" in error && error.code === "ENOENT";
 
-async function readDirectorySafely(dir: string): Promise<Dirent[] | null> {
+const readDirectorySafely = async (dir: string): Promise<Dirent[] | null> => {
   try {
     return await readdir(dir, { withFileTypes: true });
   } catch (error) {
     if (isFileNotFoundError(error)) {
       return null;
     }
+
     throw error;
   }
-}
+};
 
-async function deleteFileSafely(fullPath: string): Promise<void> {
+const deleteFileSafely = async (fullPath: string): Promise<void> => {
   try {
     await unlink(fullPath);
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      error.code !== "ENOENT"
-    ) {
+    if (error instanceof Error && "code" in error && error.code !== "ENOENT") {
       console.warn(`Failed to delete file: ${fullPath}`, error);
     }
   }
-}
+};
 
-async function processEntry(entry: Dirent, dir: string): Promise<void> {
-  const entryName = String(entry.name);
-  const fullPath = join(dir, entryName);
-
-  if (entry.isDirectory()) {
-    if (!shouldSkipDir(entryName)) {
-      await cleanup(fullPath);
-    }
-  } else if (entry.isFile() && shouldDeleteFile(entryName)) {
-    await deleteFileSafely(fullPath);
-  }
-}
-
-async function cleanup(dir: string): Promise<void> {
+const cleanup = async (dir: string): Promise<void> => {
   const entries = await readDirectorySafely(dir);
-  if (!entries) {
+
+  if (entries === null) {
     return;
   }
 
-  for (const entry of entries) {
-    await processEntry(entry, dir);
-  }
-}
+  await Promise.all(
+    entries.map(async (entry) => {
+      const entryName = entry.name;
+      const fullPath = path.join(dir, entryName);
 
-(async () => {
-  await cleanup(".");
-})();
+      if (entry.isDirectory()) {
+        if (!shouldSkipDir(entryName)) {
+          await cleanup(fullPath);
+        }
+
+        return;
+      }
+
+      if (entry.isFile() && shouldDeleteFile(entryName)) {
+        await deleteFileSafely(fullPath);
+      }
+    })
+  );
+};
+
+await cleanup(".");

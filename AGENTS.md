@@ -1,13 +1,13 @@
 # Discord Search CLI
 
-**Generated:** 2025-03-26
-**Commit:** 7db4749
-**Branch:** feat/init
+**Generated:** 2025-03-26 **Commit:** 7db4749 **Branch:** feat/init
 
 ## OVERVIEW
+
 TypeScript CLI tool for Discord message search with filtering, presets, and export. Built with Bun runtime, Zod validation, better-result error handling, and @clack/prompts for interactive UI.
 
 ## STRUCTURE
+
 ```text
 src/
 ├── cli/           # CLI UI (args, prompts, browser, keys, ansi)
@@ -24,27 +24,31 @@ src/
 ```
 
 ## WHERE TO LOOK
-| Task | Location | Notes |
-|------|----------|-------|
-| CLI flow | src/index.ts | Main menu loop |
-| Search logic | src/handlers/search.ts | Execution orchestration |
-| API integration | src/discord/client.ts | Rate limiting, retries |
-| Schemas | src/discord/schemas.ts | Zod validation |
-| Error handling | src/errors.ts | Tagged union |
+
+| Task            | Location               | Notes                   |
+| --------------- | ---------------------- | ----------------------- |
+| CLI flow        | src/index.ts           | Main menu loop          |
+| Search logic    | src/handlers/search.ts | Execution orchestration |
+| API integration | src/discord/client.ts  | Rate limiting, retries  |
+| Schemas         | src/discord/schemas.ts | Zod validation          |
+| Error handling  | src/errors.ts          | Tagged union            |
 
 ## CONVENTIONS
+
 - Railway-oriented programming with better-result
 - Tagged errors for discriminated unions
 - Schema-first with Zod for API contracts
 - Use `type` keyword over `interface`
 
 ## ANTI-PATTERNS
+
 - Using `interface` instead of `type`
 - Unawaited promises in async functions
 - Async functions as Promise executors
 - Throwing strings instead of Error objects
 
 ## COMMANDS
+
 ```bash
 bun run build        # Compile with tsdown
 bun run dev          # Watch mode
@@ -54,6 +58,7 @@ bun run typecheck   # TypeScript validation
 ```
 
 ## NOTES
+
 - Bin command: `discord-search`
 - Snowflake-based pagination for large datasets
 - Rate limiting with exponential backoff

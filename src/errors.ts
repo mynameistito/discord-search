@@ -1,39 +1,13 @@
-import { TaggedError } from "better-result";
-import type { ZodIssue } from "zod";
+export { ConfigError } from "@/errors/config-error.ts";
 
-export class ConfigError extends TaggedError("ConfigError")<{
-  message: string;
-}>() {}
+export { DiscordApiError } from "@/errors/discord-api-error.ts";
 
-export class DiscordApiError extends TaggedError("DiscordApiError")<{
-  message: string;
-  status: number;
-  body: unknown;
-}>() {}
+export { ExportError } from "@/errors/export-error.ts";
 
-export class RateLimitExhaustedError extends TaggedError(
-  "RateLimitExhaustedError"
-)<{
-  message: string;
-  retryAfter: number;
-}>() {}
+export { IndexNotReadyError } from "@/errors/index-not-ready-error.ts";
 
-export class IndexNotReadyError extends TaggedError("IndexNotReadyError")<{
-  message: string;
-  retryAfter: number;
-}>() {}
+export { PresetError } from "@/errors/preset-error.ts";
 
-export class ValidationError extends TaggedError("ValidationError")<{
-  message: string;
-  issues: ZodIssue[];
-}>() {}
+export { RateLimitExhaustedError } from "@/errors/rate-limit-exhausted-error.ts";
 
-export class ExportError extends TaggedError("ExportError")<{
-  message: string;
-  cause: unknown;
-}>() {}
-
-export class PresetError extends TaggedError("PresetError")<{
-  message: string;
-  cause: unknown;
-}>() {}
+export { ValidationError } from "@/errors/validation-error.ts";

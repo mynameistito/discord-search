@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+
 import { intro, log, outro, select } from "@clack/prompts";
+import { z } from "zod";
+
 import { exitWithError, HELP_TEXT, SUBCOMMAND_HELP } from "@/cli/args-help.ts";
 import { parseArgs } from "@/cli/args-parse.ts";
 import type {
@@ -15,7 +18,8 @@ import type {
   SettingsShowArgs,
 } from "@/cli/args-types.ts";
 import { handleCancel } from "@/cli/prompts.ts";
-import { type loadConfig, loadConfig as loadConfigFn } from "@/config.ts";
+import { loadConfig as loadConfigFn } from "@/config.ts";
+import type { loadConfig } from "@/config.ts";
 import {
   deletePresetNonInteractive,
   handleManagePresets,
@@ -44,6 +48,17 @@ import type { AppState } from "@/types.ts";
 
 type ConfigResult = Awaited<ReturnType<typeof loadConfig>>;
 
+const MenuActionSchema = z.enum([
+  "search",
+  "preset",
+  "run-all",
+  "manage",
+  "settings",
+  "exit",
+]);
+
+const PackageVersionSchema = z.object({ version: z.string() });
+
 const handleMenuAction = async (
   action: string,
   state: AppState
@@ -54,28 +69,36 @@ const handleMenuAction = async (
 
   if (action === "manage") {
     await handleManagePresets();
+
     return true;
   }
 
   if (action === "run-all") {
-    if (!state.token) {
+    if (state.token === undefined || state.token.length === 0) {
       log.error("No token configured. Update your token in Settings first.");
+
       return true;
     }
+
     await handleRunAllPresets(state.token);
+
     return true;
   }
 
   if (action === "settings") {
     await handleSettings(state);
+
     return true;
   }
 
-  if (!state.token) {
+  if (state.token === undefined || state.token.length === 0) {
     log.error("No token configured. Update your token in Settings first.");
+
     return true;
   }
+
   const searchParams = await resolveSearchParams(action, state.defaultGuildId);
+
   if (searchParams) {
     await executeSearch(searchParams, state.token);
   }
@@ -95,34 +118,41 @@ const runInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
   const token = await resolveToken(cliArgs.token, configResult);
 
   const state: AppState = {
-    token,
     clientId:
       cliArgs.clientId ??
       (configResult.isOk() ? configResult.value.clientId : undefined),
     defaultGuildId:
       cliArgs.guild ??
       (configResult.isOk() ? configResult.value.defaultGuildId : undefined),
+    token,
   };
 
-  while (true) {
+  const runMenu = async (): Promise<void> => {
     const action = await select({
       message: "What would you like to do?",
       options: [
-        { value: "search", label: "New search" },
-        { value: "preset", label: "Load preset" },
-        { value: "run-all", label: "Bulk run presets" },
-        { value: "manage", label: "Manage presets" },
-        { value: "settings", label: "Settings" },
-        { value: "exit", label: "Exit" },
+        { label: "New search", value: "search" },
+        { label: "Load preset", value: "preset" },
+        { label: "Bulk run presets", value: "run-all" },
+        { label: "Manage presets", value: "manage" },
+        { label: "Settings", value: "settings" },
+        { label: "Exit", value: "exit" },
       ],
     });
+
     handleCancel(action);
 
-    const shouldContinue = await handleMenuAction(action as string, state);
-    if (!shouldContinue) {
-      break;
+    const shouldContinue = await handleMenuAction(
+      MenuActionSchema.parse(action),
+      state
+    );
+
+    if (shouldContinue) {
+      await runMenu();
     }
-  }
+  };
+
+  await runMenu();
 
   outro("Goodbye!");
 };
@@ -131,27 +161,38 @@ const handleSearchCommand = async (
   cliArgs: SearchArgs,
   configResult: ConfigResult
 ): Promise<void> => {
-  if (!cliArgs.params.guildId) {
+  if (cliArgs.params.guildId.length === 0) {
     exitWithError("--guild is required for search.", "search");
+
+    return;
   }
+
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
+
   if (tokenResult.isErr()) {
-    return exitWithError(tokenResult.error.message, "search");
+    exitWithError(tokenResult.error.message, "search");
+
+    return;
   }
+
   await executeNonInteractiveSearch(cliArgs.params, tokenResult.value, {
     export: cliArgs.export,
-    outputDir: cliArgs.outputDir,
     json: cliArgs.json,
+    outputDir: cliArgs.outputDir,
   });
 
-  if (cliArgs.savePreset) {
+  if (cliArgs.savePreset !== undefined) {
     const saveResult = await savePreset(cliArgs.savePreset, cliArgs.params);
+
     if (saveResult.isErr()) {
-      return exitWithError(
+      exitWithError(
         `Failed to save preset "${cliArgs.savePreset}": ${saveResult.error.message}`,
         "preset"
       );
+
+      return;
     }
+
     process.stderr.write(`Saved preset: ${cliArgs.savePreset}\n`);
   }
 };
@@ -161,13 +202,17 @@ const handlePresetRunCommand = async (
   configResult: ConfigResult
 ): Promise<void> => {
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
+
   if (tokenResult.isErr()) {
-    return exitWithError(tokenResult.error.message, "preset");
+    exitWithError(tokenResult.error.message, "preset");
+
+    return;
   }
+
   await runPresetNonInteractive(cliArgs.name, tokenResult.value, {
     export: cliArgs.export,
-    outputDir: cliArgs.outputDir,
     json: cliArgs.json,
+    outputDir: cliArgs.outputDir,
   });
 };
 
@@ -176,9 +221,13 @@ const handlePresetRunAllCommand = async (
   configResult: ConfigResult
 ): Promise<void> => {
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
+
   if (tokenResult.isErr()) {
-    return exitWithError(tokenResult.error.message, "preset");
+    exitWithError(tokenResult.error.message, "preset");
+
+    return;
   }
+
   await runAllPresetsNonInteractive(
     cliArgs.names,
     cliArgs.all,
@@ -206,11 +255,11 @@ const buildStateFromConfig = (
   configResult: ConfigResult,
   cliToken?: string
 ): AppState => ({
-  token: configResult.isOk() ? configResult.value.token : cliToken,
   clientId: configResult.isOk() ? configResult.value.clientId : undefined,
   defaultGuildId: configResult.isOk()
     ? configResult.value.defaultGuildId
     : undefined,
+  token: configResult.isOk() ? configResult.value.token : cliToken,
 });
 
 const handleSettingsShowCommand = (
@@ -235,6 +284,7 @@ const handleSettingsInviteCommand = (
   const clientId =
     cliArgs.clientId ??
     (configResult.isOk() ? configResult.value.clientId : undefined);
+
   showInviteLinkNonInteractive(clientId);
 };
 
@@ -294,9 +344,12 @@ const main = async (): Promise<void> => {
 
   if (cliArgs.help) {
     const subHelp =
-      cliArgs.command in SUBCOMMAND_HELP
-        ? SUBCOMMAND_HELP[cliArgs.command as keyof typeof SUBCOMMAND_HELP]
+      cliArgs.command === "search" ||
+      cliArgs.command === "preset" ||
+      cliArgs.command === "settings"
+        ? SUBCOMMAND_HELP[cliArgs.command]
         : undefined;
+
     console.log(subHelp ?? HELP_TEXT);
     process.exit(0);
   }
@@ -305,27 +358,31 @@ const main = async (): Promise<void> => {
     const pkg: unknown = JSON.parse(
       await readFile(new URL("../package.json", import.meta.url), "utf-8")
     );
-    const version =
-      pkg &&
-      typeof pkg === "object" &&
-      "version" in pkg &&
-      typeof pkg.version === "string"
-        ? pkg.version
-        : "unknown";
+
+    const parsedPackage = PackageVersionSchema.safeParse(pkg);
+
+    const version = parsedPackage.success
+      ? parsedPackage.data.version
+      : "unknown";
+
     console.log(`discord-search ${version}`);
     process.exit(0);
   }
 
-  if (cliArgs.command === "interactive") {
-    await runInteractive(cliArgs);
-  } else {
-    await runNonInteractive(cliArgs);
+  await (cliArgs.command === "interactive"
+    ? runInteractive(cliArgs)
+    : runNonInteractive(cliArgs));
+};
+
+const run = async (): Promise<void> => {
+  try {
+    await main();
+  } catch (error: unknown) {
+    console.error(
+      error instanceof Error ? (error.stack ?? error.message) : String(error)
+    );
+    process.exit(1);
   }
 };
 
-main().catch((err: unknown) => {
-  console.error(
-    err instanceof Error ? (err.stack ?? err.message) : String(err)
-  );
-  process.exit(1);
-});
+void run();

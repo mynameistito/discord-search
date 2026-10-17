@@ -183,21 +183,29 @@ const HELP_TEXT = [
 ].join("\n\n");
 
 const SUBCOMMAND_HELP: Record<"search" | "preset" | "settings", string> = {
-  search: SEARCH_HELP_TEXT,
   preset: PRESET_HELP_TEXT,
+  search: SEARCH_HELP_TEXT,
   settings: SETTINGS_HELP_TEXT,
 };
 
 export { HELP_TEXT, SUBCOMMAND_HELP };
 
+/**
+ * Print a CLI error with a pointer to the relevant help page, then exit.
+ *
+ * @param message - The error to show.
+ * @param subcommand - Optional subcommand associated with the error.
+ */
 export const exitWithError = (message: string, subcommand?: string): never => {
   process.stderr.write(`${ANSI_RED}Error: ${message}${ANSI_RESET}\n`);
 
-  const baseCommand = subcommand?.split(" ")[0] as
-    | "search"
-    | "preset"
-    | "settings"
-    | undefined;
+  const command = subcommand?.split(" ")[0];
+
+  const baseCommand =
+    command === "search" || command === "preset" || command === "settings"
+      ? command
+      : undefined;
+
   if (baseCommand && baseCommand in SUBCOMMAND_HELP) {
     process.stderr.write(
       `\n${ANSI_DIM}Run ${ANSI_YELLOW}discord-search ${baseCommand} --help${ANSI_RESET}${ANSI_DIM} for usage info.${ANSI_RESET}\n`

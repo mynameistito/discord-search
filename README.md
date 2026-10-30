@@ -1,5 +1,6 @@
 # discord-search
 
+<!-- prettier-ignore-start -->
 > [!WARNING]
 > Currently not actively maintained. - 31/10/2026
 
@@ -10,6 +11,7 @@ Search Discord server messages from your terminal. Filter by author, content typ
 > It uses Discord's public API to search messages in servers where **your** bot has the proper permissions. You are fully responsible for complying with Discord's [Terms of Service](https://discord.com/terms), [Developer Policy](https://support-dev.discord.com/hc/en-us/articles/8563934450327-Discord-Developer-Policy), and [Message Content Intent Review Policy](https://support-dev.discord.com/hc/en-us/articles/5324827539479-Message-Content-Intent-Review-Policy).
 >
 > Do not use this tool to scrape servers you don't own or for any purpose that violates user privacy. Rate limits are handled automatically, but excessive use can still get your bot token flagged.
+<!-- prettier-ignore-end -->
 
 ## Prerequisites
 

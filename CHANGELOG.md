@@ -1,5 +1,11 @@
 # discord-search
 
+## 0.1.1
+
+### Patch Changes
+
+- 8c388e7: Fix CLI parsing, Discord search and rate-limit handling, and update the project tooling to Ultracite.
+
 ## 0.1.0
 
 ### Minor Changes

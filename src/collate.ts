@@ -1,7 +1,7 @@
 import type { Embed, Message } from "@/discord/schemas.ts";
 
 /** An embed paired with the message and author it came from. */
-export interface FlattenedEmbed {
+interface FlattenedEmbed {
   channelId: string;
   embed: Embed;
   messageAuthor: { id: string; username: string; bot?: boolean };
@@ -10,7 +10,7 @@ export interface FlattenedEmbed {
 }
 
 /** Extracted embed fields with their originating message metadata. */
-export interface ExtractedFieldRow {
+interface ExtractedFieldRow {
   channelId: string;
   embedDescription: string | null;
   embedTitle: string | null;

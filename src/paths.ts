@@ -2,14 +2,11 @@ import { access, chmod, constants, mkdir, open } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 
-export const APP_DIR = path.join(homedir(), ".discord-search");
+const APP_DIR = path.join(homedir(), ".discord-search");
 export const SETTINGS_FILE = path.join(APP_DIR, "settings.json");
-export const PRESETS_FILE = path.join(APP_DIR, ".discord-search-presets.json");
+const PRESETS_FILE = path.join(APP_DIR, ".discord-search-presets.json");
 
-export const PRESETS_FILE_JSONC = path.join(
-  APP_DIR,
-  ".discord-search-presets.jsonc"
-);
+const PRESETS_FILE_JSONC = path.join(APP_DIR, ".discord-search-presets.jsonc");
 
 export const OUTPUT_DIR = path.join(APP_DIR, "output");
 

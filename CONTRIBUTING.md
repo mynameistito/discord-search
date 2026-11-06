@@ -18,7 +18,7 @@ bun install
 Pre-commit hooks are managed by [Lefthook](https://github.com/evilmartians/lefthook) and run automatically on commit. They run in parallel:
 
 - **Lint & format** (`ultracite fix`) — auto-fixes JS/TS/JSON/CSS files
-- **Type check** (`bun run typecheck`) — tsrs validation on changed `.ts` files
+- **Type check** (`bun run typecheck`) — checks the whole project when `.ts` or `.tsx` files are staged
 - **YAML validation** (`v8r`) — validates `.yml`/`.yaml` files
 - **Cleanup script** — runs `scripts/cleanup.ts` on every commit
 
@@ -88,7 +88,7 @@ When adding a feature or fixing a bug, include tests in `__tests__/`.
 Run the test suite before opening a PR:
 
 ```sh
-bun test
+bun run test
 ```
 
 ## Submitting a PR
@@ -114,7 +114,7 @@ bun test
 
 - [ ] Linked to an open issue
 - [ ] Tests added or updated
-- [ ] `bun test` passes
+- [ ] `bun run test` passes
 - [ ] `bun run typecheck` passes
 - [ ] Changeset added (if user-facing)
 - [ ] PR description explains _what_ and _why_, not just _what_
@@ -137,7 +137,7 @@ CI runs on every push and PR to `main`:
 
 1. **check** — typecheck + lint
 2. **build** — build verification + `npm pack --dry-run`
-3. **test-bun** — `bun test` on Bun latest and canary (canary failures are non-blocking)
+3. **test-bun** — `bun run test` on Bun 1.4.4 and canary (canary failures are non-blocking)
 
 All jobs must pass for a PR to be mergeable.
 

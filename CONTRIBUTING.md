@@ -4,7 +4,7 @@ Thanks for taking the time to contribute!
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.0.0 **or** Node.js ≥ 18.0.0
+- [Bun](https://bun.sh) 1.4.4 and Node.js 24 for development and CI
 - A Discord bot token (for running the tool locally — see the [README](README.md) for setup)
 
 ## Setup
@@ -18,7 +18,7 @@ bun install
 Pre-commit hooks are managed by [Lefthook](https://github.com/evilmartians/lefthook) and run automatically on commit. They run in parallel:
 
 - **Lint & format** (`ultracite fix`) — auto-fixes JS/TS/JSON/CSS files
-- **Type check** (`tsc --noEmit`) — TypeScript validation on changed `.ts` files
+- **Type check** (`bun run typecheck`) — tsrs validation on changed `.ts` files
 - **YAML validation** (`v8r`) — validates `.yml`/`.yaml` files
 - **Cleanup script** — runs `scripts/cleanup.ts` on every commit
 
@@ -53,12 +53,14 @@ scripts/
 ## Development
 
 ```sh
-bun test          # run full test suite with Bun
-bun run typecheck # type-check with tsc --noEmit
-bun run check     # lint with Biome/Ultracite (report only)
+bun run test      # run the Vitest suite
+bun run typecheck # type-check with tsrs
+bun run check     # lint and check formatting with Ultracite
 bun run fix       # lint + auto-fix
 bun run build     # build to dist/
 ```
+
+The `typescript` development dependency provides the compiler API required by the GitHub lint plugin and declaration bundler. The TypeScript 7 package does not currently provide the API used by that lint plugin, so the project retains the TypeScript 6 compatibility package while tsrs performs typechecking.
 
 ### Configuration
 

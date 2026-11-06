@@ -83,6 +83,21 @@ jobs:
           node dist/index.mjs search --help --guild 123
           node dist/index.cjs --help
 
+      - name: Setup minimum Bun runtime
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.0.31
+
+      - name: Smoke test bundled CLI on minimum Bun
+        run: |
+          bun dist/index.mjs --help
+          bun dist/index.mjs search --help --guild 123
+          bun dist/index.mjs --version
+          if output=$(bun dist/index.mjs search --guild 123 --limit invalid 2>&1); then
+            exit 1
+          fi
+          printf '%s\n' "$output" | grep -F 'Invalid value for --limit'
+
   test-bun:
     name: Test with Bun
     needs: [check]

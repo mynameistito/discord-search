@@ -13,7 +13,7 @@ const snowflakeArraySchema = z.array(snowflakeSchema);
 
 // Embed sub-objects
 
-export const EmbedFooterSchema = z.object({
+const EmbedFooterSchema = z.object({
   icon_url: z.string().optional(),
   proxy_icon_url: z.string().optional(),
   text: z.string(),
@@ -26,35 +26,35 @@ const EmbedMediaSchema = z.object({
   width: z.number().optional(),
 });
 
-export const EmbedImageSchema = EmbedMediaSchema;
-export const EmbedThumbnailSchema = EmbedMediaSchema;
+const EmbedImageSchema = EmbedMediaSchema;
+const EmbedThumbnailSchema = EmbedMediaSchema;
 
-export const EmbedVideoSchema = z.object({
+const EmbedVideoSchema = z.object({
   height: z.number().optional(),
   proxy_url: z.string().optional(),
   url: z.string().optional(),
   width: z.number().optional(),
 });
 
-export const EmbedProviderSchema = z.object({
+const EmbedProviderSchema = z.object({
   name: z.string().optional(),
   url: z.string().optional(),
 });
 
-export const EmbedAuthorSchema = z.object({
+const EmbedAuthorSchema = z.object({
   icon_url: z.string().optional(),
   name: z.string(),
   proxy_icon_url: z.string().optional(),
   url: z.string().optional(),
 });
 
-export const EmbedFieldSchema = z.object({
+const EmbedFieldSchema = z.object({
   inline: z.boolean().optional(),
   name: z.string(),
   value: z.string(),
 });
 
-export const EmbedSchema = z.object({
+const EmbedSchema = z.object({
   author: EmbedAuthorSchema.optional(),
   color: z.number().optional(),
   description: z.string().optional(),
@@ -70,7 +70,7 @@ export const EmbedSchema = z.object({
   video: EmbedVideoSchema.optional(),
 });
 
-export const UserSchema = z.object({
+const UserSchema = z.object({
   avatar: z.string().nullable().optional(),
   bot: z.boolean().optional(),
   discriminator: z.string().optional(),
@@ -78,7 +78,7 @@ export const UserSchema = z.object({
   username: z.string(),
 });
 
-export const AttachmentSchema = z.object({
+const AttachmentSchema = z.object({
   content_type: z.string().optional(),
   filename: z.string(),
   id: snowflakeSchema,
@@ -87,7 +87,7 @@ export const AttachmentSchema = z.object({
   url: z.string(),
 });
 
-export const MessageSchema = z.object({
+const MessageSchema = z.object({
   attachments: z.array(AttachmentSchema).optional(),
   author: UserSchema,
   channel_id: snowflakeSchema,
@@ -113,7 +113,7 @@ export const MessageSchema = z.object({
   type: z.number().optional(),
 });
 
-export const ThreadSchema = z.object({
+const ThreadSchema = z.object({
   guild_id: snowflakeSchema.optional(),
   id: snowflakeSchema,
   member_count: z.number().optional(),
@@ -131,7 +131,7 @@ export const ThreadSchema = z.object({
   type: z.number(),
 });
 
-export const MemberSchema = z.object({
+const MemberSchema = z.object({
   avatar: z.string().nullable().optional(),
   deaf: z.boolean().optional(),
   joined_at: z.string().optional(),
@@ -209,26 +209,11 @@ export const SearchParamsSchema = z.object({
 /** Inferred Discord embed payload. */
 export type Embed = z.infer<typeof EmbedSchema>;
 
-/** Inferred embed field payload. */
-export type EmbedField = z.infer<typeof EmbedFieldSchema>;
-
-/** Inferred Discord user payload. */
-export type User = z.infer<typeof UserSchema>;
-
 /** Inferred Discord message payload. */
 export type Message = z.infer<typeof MessageSchema>;
 
-/** Inferred Discord thread payload. */
-export type Thread = z.infer<typeof ThreadSchema>;
-
-/** Inferred Discord guild-member payload. */
-export type Member = z.infer<typeof MemberSchema>;
-
 /** Inferred Discord message-search response. */
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
-
-/** Inferred response returned while Discord indexes search results. */
-export type IndexNotReadyResponse = z.infer<typeof IndexNotReadyResponseSchema>;
 
 /** Inferred and validated search filter parameters. */
 export type SearchParams = z.infer<typeof SearchParamsSchema>;

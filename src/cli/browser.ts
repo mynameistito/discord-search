@@ -170,64 +170,54 @@ export const browseMessages = async (messages: Message[]): Promise<void> => {
     return;
   }
 
-  const { promise, resolve, reject } = Promise.withResolvers<boolean>();
-
   if (messages.length === 0) {
     write(`${ANSI_DIM}No messages to browse.${ANSI_RESET}\n`);
 
     return;
   }
 
-  const state = { index: 0, viewMode: "preview" as const };
+  // The key listener is callback-based and needs a promise to represent viewer completion on older runtimes.
+  // oxlint-disable-next-line promise/avoid-new -- Bridge the terminal callback to the async caller.
+  await new Promise<void>((resolve, reject) => {
+    const state = { index: 0, viewMode: "preview" as const };
 
-  let cleanup = pauseInput;
+    let cleanup = pauseInput;
 
-  const render = (): boolean => {
-    const msg = messages[state.index];
+    const render = (): boolean => {
+      const msg = messages[state.index];
 
-    if (!msg) {
-      return true;
-    }
+      if (!msg) {
+        return true;
+      }
 
-    try {
-      renderMessageView(msg, state.index, messages.length, state.viewMode);
+      try {
+        renderMessageView(msg, state.index, messages.length, state.viewMode);
 
-      return true;
-    } catch (error) {
-      handleRenderError(
-        error instanceof Error ? error : new Error(String(error)),
-        reject,
-        cleanup
-      );
+        return true;
+      } catch (error) {
+        handleRenderError(
+          error instanceof Error ? error : new Error(String(error)),
+          reject,
+          cleanup
+        );
 
-      return false;
-    }
-  };
+        return false;
+      }
+    };
 
-  const renderSucceeded = render();
-
-  if (!renderSucceeded) {
-    await promise;
-
-    return;
-  }
-
-  cleanup = createKeyListener((key) => {
-    if (key === "q" || key === "\u001B") {
-      handleQuit(
-        cleanup,
-        () => {
-          resolve(true);
-        },
-        reject
-      );
-
+    if (!render()) {
       return;
     }
 
-    navigate(key, state, messages.length);
-    render();
-  });
+    cleanup = createKeyListener((key) => {
+      if (key === "q" || key === "\u001B") {
+        handleQuit(cleanup, resolve, reject);
 
-  await promise;
+        return;
+      }
+
+      navigate(key, state, messages.length);
+      render();
+    });
+  });
 };

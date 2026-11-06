@@ -12,4 +12,10 @@ export default defineConfig({
   ignorePatterns: core.ignorePatterns,
   jsPlugins: jsPlugins.jsPlugins,
   options: { typeAware: true },
+  overrides: [
+    {
+      files: ["src/collate.ts"],
+      rules: { "typescript/consistent-type-definitions": ["error", "type"] },
+    },
+  ],
 });

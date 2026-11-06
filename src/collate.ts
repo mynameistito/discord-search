@@ -1,26 +1,26 @@
 import type { Embed, Message } from "@/discord/schemas.ts";
 
 /** An embed paired with the message and author it came from. */
-export interface FlattenedEmbed {
+type FlattenedEmbed = {
   channelId: string;
   embed: Embed;
   messageAuthor: { id: string; username: string; bot?: boolean };
   messageId: string;
   messageTimestamp: string;
-}
+};
 
 /** Extracted embed fields with their originating message metadata. */
-export interface ExtractedFieldRow {
+type ExtractedFieldRow = {
   channelId: string;
   embedDescription: string | null;
   embedTitle: string | null;
   fields: Record<string, string>;
   messageId: string;
   messageTimestamp: string;
-}
+};
 
 /** Aggregated messages, embeds, and author/channel statistics. */
-export interface CollatedData {
+export type CollatedData = {
   byAuthor: Record<string, { count: number; username: string; bot?: boolean }>;
   byChannel: Record<string, number>;
   embeds: FlattenedEmbed[];
@@ -32,7 +32,7 @@ export interface CollatedData {
   messages: Message[];
   totalEmbeds: number;
   totalMessages: number;
-}
+};
 
 const extractDomain = (url: string): string | null => {
   try {

@@ -4,7 +4,7 @@ Thanks for taking the time to contribute!
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.0.0 **or** Node.js ≥ 18.0.0
+- [Bun](https://bun.sh) 1.4.4 and Node.js 24 for development and CI
 - A Discord bot token (for running the tool locally — see the [README](README.md) for setup)
 
 ## Setup
@@ -18,7 +18,7 @@ bun install
 Pre-commit hooks are managed by [Lefthook](https://github.com/evilmartians/lefthook) and run automatically on commit. They run in parallel:
 
 - **Lint & format** (`ultracite fix`) — auto-fixes JS/TS/JSON/CSS files
-- **Type check** (`tsc --noEmit`) — TypeScript validation on changed `.ts` files
+- **Type check** (`bun run typecheck`) — checks the whole project when `.ts` or `.tsx` files are staged
 - **YAML validation** (`v8r`) — validates `.yml`/`.yaml` files
 - **Cleanup script** — runs `scripts/cleanup.ts` on every commit
 
@@ -46,19 +46,21 @@ scripts/
   cleanup.ts          # Pre-commit cleanup hook
 
  .github/workflows/
-   ci.yml              # Typecheck → lint → build → test (Bun latest/canary)
+   ci.yml              # Typecheck → lint → build → test (Bun 1.4.4/canary)
    release.yml         # Changesets-based npm publish
 ```
 
 ## Development
 
 ```sh
-bun test          # run full test suite with Bun
-bun run typecheck # type-check with tsc --noEmit
-bun run check     # lint with Biome/Ultracite (report only)
+bun run test      # run the Vitest suite
+bun run typecheck # type-check with tsrs
+bun run check     # lint and check formatting with Ultracite
 bun run fix       # lint + auto-fix
 bun run build     # build to dist/
 ```
+
+The `typescript` development dependency provides the compiler API required by the GitHub lint plugin and declaration bundler. The TypeScript 7 package does not currently provide the API used by that lint plugin, so the project retains the TypeScript 6 compatibility package while tsrs performs typechecking.
 
 ### Configuration
 
@@ -86,7 +88,7 @@ When adding a feature or fixing a bug, include tests in `__tests__/`.
 Run the test suite before opening a PR:
 
 ```sh
-bun test
+bun run test
 ```
 
 ## Submitting a PR
@@ -112,7 +114,7 @@ bun test
 
 - [ ] Linked to an open issue
 - [ ] Tests added or updated
-- [ ] `bun test` passes
+- [ ] `bun run test` passes
 - [ ] `bun run typecheck` passes
 - [ ] Changeset added (if user-facing)
 - [ ] PR description explains _what_ and _why_, not just _what_
@@ -135,7 +137,7 @@ CI runs on every push and PR to `main`:
 
 1. **check** — typecheck + lint
 2. **build** — build verification + `npm pack --dry-run`
-3. **test-bun** — `bun test` on Bun latest and canary (canary failures are non-blocking)
+3. **test-bun** — `bun run test` on Bun 1.4.4 and canary (canary failures are non-blocking)
 
 All jobs must pass for a PR to be mergeable.
 

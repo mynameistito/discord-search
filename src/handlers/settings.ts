@@ -31,7 +31,7 @@ const showCurrentSettings = (state: AppState): void => {
  * @param state - Current CLI settings.
  * @returns Success or the persistence error.
  */
-export const saveStateToSettings = async (
+const saveStateToSettings = async (
   state: AppState
 ): Promise<Result<void, Error>> => {
   const values: SettingsJson = {};

@@ -137,31 +137,8 @@ const fetchSearch = async (
   return await discordFetch(path, SearchResponseSchema, token);
 };
 
-/** Search Discord messages using validated parameters.
- *
- * @param params - Validated message search filters.
- * @param token - Discord bot token.
- * @param offset - Initial result offset.
- * @param maxId - Optional upper snowflake bound.
- * @returns The search response or a typed search error.
- */
-export const searchMessages = async (
-  params: SearchParams,
-  token: string,
-  offset = 0,
-  maxId?: string
-): Promise<Result<SearchResponse, SearchError>> => {
-  const validatedParams = validateSearchParams(params);
-
-  if (validatedParams.isErr()) {
-    return Result.err(validatedParams.error);
-  }
-
-  return await fetchSearch(validatedParams.value, token, offset, maxId);
-};
-
 /** Progress emitted while paginating Discord search results. */
-export interface SearchProgress {
+interface SearchProgress {
   fetched: number;
   total: number;
 }

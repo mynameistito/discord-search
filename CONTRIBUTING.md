@@ -46,7 +46,7 @@ scripts/
   cleanup.ts          # Pre-commit cleanup hook
 
  .github/workflows/
-   ci.yml              # Typecheck → lint → build → test (Bun latest/canary)
+   ci.yml              # Typecheck → lint → build → test (Bun 1.4.4/canary)
    release.yml         # Changesets-based npm publish
 ```
 

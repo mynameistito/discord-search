@@ -72,6 +72,17 @@ jobs:
       - name: Pack (dry-run)
         run: npm pack --dry-run
 
+      - name: Setup minimum Node.js runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "20.12.0"
+
+      - name: Smoke test bundled CLI on minimum Node.js
+        run: |
+          node dist/index.mjs --help
+          node dist/index.mjs search --help --guild 123
+          node dist/index.cjs --help
+
   test-bun:
     name: Test with Bun
     needs: [check]

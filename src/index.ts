@@ -381,14 +381,16 @@ const main = async () => {
 
 const run = async () => {
   try {
-    await main();
+    try {
+      await main();
+    } finally {
+      await disposeRuntime();
+    }
   } catch (error: unknown) {
     console.error(
       error instanceof Error ? (error.stack ?? error.message) : String(error)
     );
-    process.exitCode = 1;
-  } finally {
-    await disposeRuntime();
+    process.exit(1);
   }
 };
 

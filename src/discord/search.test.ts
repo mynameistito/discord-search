@@ -89,6 +89,22 @@ describe("Discord search", () => {
     );
   });
 
+  it("keeps the HTTP status when a successful response has no JSON body", async () => {
+    const client = clientLayer(() => new Response(null, { status: 204 }));
+
+    const result = await Effect.runPromise(
+      searchMessages({ guildId }, token).pipe(
+        Effect.result,
+        Effect.provide(client)
+      )
+    );
+
+    expect(Result.isFailure(result) && result.failure).toMatchObject({
+      _tag: "DiscordApiError",
+      status: 204,
+    });
+  });
+
   it("stops after five indexing retries even when each response requests another", async () => {
     let requests = 0;
 

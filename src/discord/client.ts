@@ -43,6 +43,13 @@ interface SearchRequest {
   token: Redacted.Redacted;
 }
 
+const decodeJson = Schema.decodeUnknownEffect(
+  Schema.fromJsonString(Schema.Unknown)
+);
+
+const readJson = (response: HttpClientResponse.HttpClientResponse) =>
+  response.text.pipe(Effect.flatMap(decodeJson));
+
 type DiscordSearchError =
   | DiscordApiError
   | IndexNotReadyError
@@ -164,7 +171,7 @@ const make = Effect.gen(function* make() {
       yield* updateBucket(bucketKey, response.headers);
 
       if (response.status === 202) {
-        const retryAfter = yield* response.json.pipe(
+        const retryAfter = yield* readJson(response).pipe(
           Effect.flatMap(
             Schema.decodeUnknownEffect(IndexNotReadyResponseSchema)
           ),
@@ -182,7 +189,7 @@ const make = Effect.gen(function* make() {
         indexRetries += 1;
         indexDelay = retryAfter;
       } else if (response.status === 429) {
-        const body = yield* response.json.pipe(
+        const body = yield* readJson(response).pipe(
           Effect.mapError(
             () =>
               new DiscordApiError({
@@ -219,7 +226,7 @@ const make = Effect.gen(function* make() {
         );
         rateLimitRetries += 1;
       } else if (response.status < 200 || response.status >= 300) {
-        const body = yield* response.json.pipe(
+        const body = yield* readJson(response).pipe(
           Effect.orElseSucceed(() => null)
         );
 
@@ -232,7 +239,7 @@ const make = Effect.gen(function* make() {
           status: response.status,
         });
       } else {
-        const body = yield* response.json.pipe(
+        const body = yield* readJson(response).pipe(
           Effect.mapError(
             () =>
               new DiscordApiError({

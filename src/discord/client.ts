@@ -32,16 +32,16 @@ const MAX_INDEX_RETRIES = 5;
 const DEFAULT_INDEX_DELAY_SECONDS = 2;
 const REQUEST_TIMEOUT_MS = 30_000;
 
-interface RateLimitState {
+type RateLimitState = {
   remaining: number;
   resetAt: number;
-}
+};
 
-interface SearchRequest {
+type SearchRequest = {
   guildId: string;
   query: string;
   token: Redacted.Redacted;
-}
+};
 
 const decodeJson = Schema.decodeUnknownEffect(
   Schema.fromJsonString(Schema.Unknown)
@@ -56,11 +56,11 @@ type DiscordSearchError =
   | RateLimitExhaustedError
   | ValidationError;
 
-interface DiscordClientService {
+type DiscordClientService = {
   readonly search: (
     request: SearchRequest
   ) => Effect.Effect<SearchResponse, DiscordSearchError>;
-}
+};
 
 /** Fetch authenticated search pages and coordinate Discord rate limits. */
 export class DiscordClient extends Context.Service<
@@ -69,7 +69,7 @@ export class DiscordClient extends Context.Service<
 >()("@discord-search/DiscordClient") {}
 
 const make = Effect.gen(function* make() {
-  const http = yield* HttpClient.HttpClient;
+  const http = HttpClient.withScope(yield* HttpClient.HttpClient);
   const rateLimits = new Map<string, RateLimitState>();
 
   const waitForBucket = Effect.fn("DiscordClient.waitForBucket")(
@@ -138,7 +138,7 @@ const make = Effect.gen(function* make() {
 
       yield* waitForBucket(bucketKey);
 
-      const response = yield* http
+      const { json, status } = yield* http
         .get(url, {
           headers: {
             authorization: `Bot ${authorization}`,
@@ -146,6 +146,16 @@ const make = Effect.gen(function* make() {
           },
         })
         .pipe(
+          Effect.tap((response) => updateBucket(bucketKey, response.headers)),
+          Effect.flatMap((response) =>
+            Effect.result(readJson(response)).pipe(
+              Effect.map((result) => ({
+                json: result,
+                status: response.status,
+              }))
+            )
+          ),
+          Effect.scoped,
           Effect.timeoutOrElse({
             duration: REQUEST_TIMEOUT_MS,
             orElse: () =>
@@ -168,14 +178,14 @@ const make = Effect.gen(function* make() {
           )
         );
 
-      yield* updateBucket(bucketKey, response.headers);
-
-      if (response.status === 202) {
-        const retryAfter = yield* readJson(response).pipe(
+      if (status === 202) {
+        const retryAfter = yield* Effect.fromResult(json).pipe(
           Effect.flatMap(
             Schema.decodeUnknownEffect(IndexNotReadyResponseSchema)
           ),
-          Effect.map((body) => body.retry_after),
+          Effect.map(({ retry_after }) =>
+            retry_after > 0 ? retry_after : DEFAULT_INDEX_DELAY_SECONDS
+          ),
           Effect.orElseSucceed(() => DEFAULT_INDEX_DELAY_SECONDS)
         );
 
@@ -188,8 +198,8 @@ const make = Effect.gen(function* make() {
 
         indexRetries += 1;
         indexDelay = retryAfter;
-      } else if (response.status === 429) {
-        const body = yield* readJson(response).pipe(
+      } else if (status === 429) {
+        const body = yield* Effect.fromResult(json).pipe(
           Effect.mapError(
             () =>
               new DiscordApiError({
@@ -225,27 +235,26 @@ const make = Effect.gen(function* make() {
           retryAfter * 1000 * 2 ** rateLimitRetries + jitter * 1000
         );
         rateLimitRetries += 1;
-      } else if (response.status < 200 || response.status >= 300) {
-        const body = yield* readJson(response).pipe(
+      } else if (status < 200 || status >= 300) {
+        const body = yield* Effect.fromResult(json).pipe(
           Effect.orElseSucceed(() => null)
         );
 
-        const statusText = STATUS_CODES[response.status] ?? "";
+        const statusText = STATUS_CODES[status] ?? "";
 
         return yield* new DiscordApiError({
           body,
-          message:
-            `Discord API error: ${response.status} ${statusText}`.trimEnd(),
-          status: response.status,
+          status,
+          message: `Discord API error: ${status} ${statusText}`.trimEnd(),
         });
       } else {
-        const body = yield* readJson(response).pipe(
+        const body = yield* Effect.fromResult(json).pipe(
           Effect.mapError(
             () =>
               new DiscordApiError({
                 body: null,
                 message: "Failed to parse response JSON",
-                status: response.status,
+                status,
               })
           )
         );

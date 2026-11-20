@@ -16,11 +16,11 @@ const emptySettings: SettingsJson = {};
 const SettingsText = Schema.fromJsonString(SettingsSchema);
 
 /** Configuration required to make authenticated Discord requests. */
-export interface Config {
+export type Config = {
   clientId: string | undefined;
   defaultGuildId: string | undefined;
   token: string;
-}
+};
 
 /** Settings persisted by the CLI. */
 export type SettingsJson = typeof SettingsSchema.Type;

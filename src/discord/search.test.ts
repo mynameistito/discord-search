@@ -105,14 +105,37 @@ describe("Discord search", () => {
     });
   });
 
-  it("stops after five indexing retries even when each response requests another", async () => {
+  it("times out when response headers arrive but the body stalls", async () => {
+    const client = clientLayer(() => new Response(new ReadableStream()));
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* checkRequestTimeout() {
+        const fiber = yield* searchMessages({ guildId }, token).pipe(
+          Effect.result,
+          Effect.forkChild
+        );
+
+        yield* TestClock.adjust("30 seconds");
+
+        return yield* Fiber.join(fiber);
+      }).pipe(Effect.provide(client), Effect.provide(TestClock.layer()))
+    );
+
+    expect(Result.isFailure(result) && result.failure).toMatchObject({
+      _tag: "DiscordApiError",
+      message: "Request timed out after 30000ms",
+      status: 0,
+    });
+  });
+
+  it("waits on a zero indexing delay and stops after five retries", async () => {
     let requests = 0;
 
     const client = clientLayer(() => {
       requests += 1;
 
       return Response.json(
-        { code: 123, message: "Indexing", retry_after: 1 },
+        { code: 123, message: "Indexing", retry_after: requests === 1 ? 0 : 1 },
         { status: 202 }
       );
     });
@@ -123,6 +146,9 @@ describe("Discord search", () => {
           Effect.result,
           Effect.forkChild
         );
+
+        yield* TestClock.adjust("1 second");
+        expect(requests).toBe(1);
 
         yield* TestClock.adjust("5 seconds");
 

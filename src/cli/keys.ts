@@ -1,8 +1,8 @@
 type KeyHandler = (key: string) => void;
 
-interface ListenerState {
+type ListenerState = {
   cleanup: () => void;
-}
+};
 
 /**
  * Listen for raw stdin keys and restore the previous terminal state when stopped.

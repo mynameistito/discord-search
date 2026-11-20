@@ -90,10 +90,10 @@ const buildQueryString = (
 };
 
 /** Progress emitted while paginating Discord search results. */
-export interface SearchProgress {
+export type SearchProgress = {
   fetched: number;
   total: number;
-}
+};
 
 /** Report the number of search results retrieved so far. */
 export type ProgressCallback = (progress: SearchProgress) => void;

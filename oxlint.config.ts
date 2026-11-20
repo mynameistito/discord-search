@@ -13,4 +13,5 @@ export default defineConfig({
   ignorePatterns: core.ignorePatterns,
   jsPlugins: [...jsPlugins.jsPlugins, ...landmines.jsPlugins],
   options: { typeAware: true },
+  rules: { "typescript/consistent-type-definitions": ["error", "type"] },
 });

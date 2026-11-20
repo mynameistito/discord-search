@@ -6,7 +6,7 @@ import type { DiscordClient } from "@/discord/client.ts";
 const runtime = ManagedRuntime.make(layer);
 
 const envLayer = ConfigProvider.layer(
-  ConfigProvider.fromEnv({ preserveEmptyStrings: true })
+  ConfigProvider.fromEnvRecord(process.env, { preserveEmptyStrings: true })
 );
 
 /** Evaluate an operation and leave expected failures for the CLI to render.

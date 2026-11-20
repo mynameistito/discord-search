@@ -1,5 +1,18 @@
 # discord-search
 
+## 0.1.1
+
+### Patch Changes
+
+- 8c388e7: Fix CLI parsing, Discord search and rate-limit handling, and update the project tooling to Ultracite.
+- 6e65fe7: Run Discord search, settings, presets, and exports on Effect. Preserve request retry limits and apply the requested upper message ID on the first search page.
+
+  Apply the request timeout to the Discord response body and wait before retrying an indexing response with a zero delay. Preserve case-insensitive environment variable lookup on Windows.
+
+  The Node.js engine requirement now matches the CLI's dependencies at Node 20.12 or later.
+
+- 8f7a980: Update CLI dependencies and CI tooling, and resolve diagnostics from the stricter lint configuration.
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,231 +1,263 @@
-import { z } from "zod";
+import { Schema } from "effect";
 
 export const MAX_OFFSET = 9975;
 export const MAX_PAGE_SIZE = 25;
 
 export const SNOWFLAKE_REGEX = /^\d{17,20}$/u;
 
-const snowflakeSchema = z.string().regex(SNOWFLAKE_REGEX, {
-  message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+const snowflakeSchema = Schema.String.check(
+  Schema.isPattern(SNOWFLAKE_REGEX, {
+    message: "Invalid Discord ID: must be a 17-20 digit numeric snowflake",
+  })
+);
+
+const snowflakeArraySchema = Schema.Array(snowflakeSchema);
+
+export const EmbedFooterSchema = Schema.Struct({
+  icon_url: Schema.String.pipe(Schema.optional),
+  proxy_icon_url: Schema.String.pipe(Schema.optional),
+  text: Schema.String,
 });
 
-const snowflakeArraySchema = z.array(snowflakeSchema);
-
-export const EmbedFooterSchema = z.object({
-  icon_url: z.string().optional(),
-  proxy_icon_url: z.string().optional(),
-  text: z.string(),
-});
-
-const EmbedMediaSchema = z.object({
-  height: z.number().optional(),
-  proxy_url: z.string().optional(),
-  url: z.string(),
-  width: z.number().optional(),
+const EmbedMediaSchema = Schema.Struct({
+  height: Schema.Finite.pipe(Schema.optional),
+  proxy_url: Schema.String.pipe(Schema.optional),
+  url: Schema.String,
+  width: Schema.Finite.pipe(Schema.optional),
 });
 
 export const EmbedImageSchema = EmbedMediaSchema;
 export const EmbedThumbnailSchema = EmbedMediaSchema;
 
-export const EmbedVideoSchema = z.object({
-  height: z.number().optional(),
-  proxy_url: z.string().optional(),
-  url: z.string().optional(),
-  width: z.number().optional(),
+export const EmbedVideoSchema = Schema.Struct({
+  height: Schema.Finite.pipe(Schema.optional),
+  proxy_url: Schema.String.pipe(Schema.optional),
+  url: Schema.String.pipe(Schema.optional),
+  width: Schema.Finite.pipe(Schema.optional),
 });
 
-export const EmbedProviderSchema = z.object({
-  name: z.string().optional(),
-  url: z.string().optional(),
+export const EmbedProviderSchema = Schema.Struct({
+  name: Schema.String.pipe(Schema.optional),
+  url: Schema.String.pipe(Schema.optional),
 });
 
-export const EmbedAuthorSchema = z.object({
-  icon_url: z.string().optional(),
-  name: z.string(),
-  proxy_icon_url: z.string().optional(),
-  url: z.string().optional(),
+export const EmbedAuthorSchema = Schema.Struct({
+  icon_url: Schema.String.pipe(Schema.optional),
+  name: Schema.String,
+  proxy_icon_url: Schema.String.pipe(Schema.optional),
+  url: Schema.String.pipe(Schema.optional),
 });
 
-export const EmbedFieldSchema = z.object({
-  inline: z.boolean().optional(),
-  name: z.string(),
-  value: z.string(),
+export const EmbedFieldSchema = Schema.Struct({
+  inline: Schema.Boolean.pipe(Schema.optional),
+  name: Schema.String,
+  value: Schema.String,
 });
 
-export const EmbedSchema = z.object({
-  author: EmbedAuthorSchema.optional(),
-  color: z.number().optional(),
-  description: z.string().optional(),
-  fields: z.array(EmbedFieldSchema).optional(),
-  footer: EmbedFooterSchema.optional(),
-  image: EmbedImageSchema.optional(),
-  provider: EmbedProviderSchema.optional(),
-  thumbnail: EmbedThumbnailSchema.optional(),
-  timestamp: z.string().optional(),
-  title: z.string().optional(),
-  type: z.string().optional(),
-  url: z.string().optional(),
-  video: EmbedVideoSchema.optional(),
+export const EmbedSchema = Schema.Struct({
+  author: EmbedAuthorSchema.pipe(Schema.optional),
+  color: Schema.Finite.pipe(Schema.optional),
+  description: Schema.String.pipe(Schema.optional),
+  fields: Schema.Array(EmbedFieldSchema).pipe(Schema.optional),
+  footer: EmbedFooterSchema.pipe(Schema.optional),
+  image: EmbedImageSchema.pipe(Schema.optional),
+  provider: EmbedProviderSchema.pipe(Schema.optional),
+  thumbnail: EmbedThumbnailSchema.pipe(Schema.optional),
+  timestamp: Schema.String.pipe(Schema.optional),
+  title: Schema.String.pipe(Schema.optional),
+  type: Schema.String.pipe(Schema.optional),
+  url: Schema.String.pipe(Schema.optional),
+  video: EmbedVideoSchema.pipe(Schema.optional),
 });
 
-export const UserSchema = z.object({
-  avatar: z.string().nullable().optional(),
-  bot: z.boolean().optional(),
-  discriminator: z.string().optional(),
+export const UserSchema = Schema.Struct({
+  avatar: Schema.String.pipe(Schema.NullOr).pipe(Schema.optional),
+  bot: Schema.Boolean.pipe(Schema.optional),
+  discriminator: Schema.String.pipe(Schema.optional),
   id: snowflakeSchema,
-  username: z.string(),
+  username: Schema.String,
 });
 
-export const AttachmentSchema = z.object({
-  content_type: z.string().optional(),
-  filename: z.string(),
+export const AttachmentSchema = Schema.Struct({
+  content_type: Schema.String.pipe(Schema.optional),
+  filename: Schema.String,
   id: snowflakeSchema,
-  proxy_url: z.string().optional(),
-  size: z.number(),
-  url: z.string(),
+  proxy_url: Schema.String.pipe(Schema.optional),
+  size: Schema.Finite,
+  url: Schema.String,
 });
 
-export const MessageSchema = z.object({
-  attachments: z.array(AttachmentSchema).optional(),
+export const MessageSchema = Schema.Struct({
+  attachments: Schema.Array(AttachmentSchema).pipe(Schema.optional),
   author: UserSchema,
   channel_id: snowflakeSchema,
-  content: z.string(),
-  edited_timestamp: z.string().nullable().optional(),
-  embeds: z.array(EmbedSchema).optional(),
-  guild_id: snowflakeSchema.optional(),
+  content: Schema.String,
+  edited_timestamp: Schema.String.pipe(Schema.NullOr).pipe(Schema.optional),
+  embeds: Schema.Array(EmbedSchema).pipe(Schema.optional),
+  guild_id: snowflakeSchema.pipe(Schema.optional),
   id: snowflakeSchema,
-  mention_everyone: z.boolean().optional(),
-  mentions: z.array(UserSchema).optional(),
-  pinned: z.boolean().optional(),
-  referenced_message: z
-    .object({
-      author: UserSchema.optional(),
-      channel_id: snowflakeSchema,
-      content: z.string().optional(),
-      id: snowflakeSchema,
-    })
-    .nullable()
-    .optional(),
-  timestamp: z.string(),
-  tts: z.boolean().optional(),
-  type: z.number().optional(),
+  mention_everyone: Schema.Boolean.pipe(Schema.optional),
+  mentions: Schema.Array(UserSchema).pipe(Schema.optional),
+  pinned: Schema.Boolean.pipe(Schema.optional),
+  referenced_message: Schema.Struct({
+    author: UserSchema.pipe(Schema.optional),
+    channel_id: snowflakeSchema,
+    content: Schema.String.pipe(Schema.optional),
+    id: snowflakeSchema,
+  })
+    .pipe(Schema.NullOr)
+    .pipe(Schema.optional),
+  timestamp: Schema.String,
+  tts: Schema.Boolean.pipe(Schema.optional),
+  type: Schema.Finite.pipe(Schema.optional),
 });
 
-export const ThreadSchema = z.object({
-  guild_id: snowflakeSchema.optional(),
+export const ThreadSchema = Schema.Struct({
+  guild_id: snowflakeSchema.pipe(Schema.optional),
   id: snowflakeSchema,
-  member_count: z.number().optional(),
-  message_count: z.number().optional(),
-  name: z.string().optional(),
-  parent_id: snowflakeSchema.nullable().optional(),
-  thread_metadata: z
-    .object({
-      archive_timestamp: z.string().optional(),
-      archived: z.boolean(),
-      auto_archive_duration: z.number().optional(),
-      locked: z.boolean().optional(),
-    })
-    .optional(),
-  type: z.number(),
+  member_count: Schema.Finite.pipe(Schema.optional),
+  message_count: Schema.Finite.pipe(Schema.optional),
+  name: Schema.String.pipe(Schema.optional),
+  parent_id: snowflakeSchema.pipe(Schema.NullOr).pipe(Schema.optional),
+  thread_metadata: Schema.Struct({
+    archive_timestamp: Schema.String.pipe(Schema.optional),
+    archived: Schema.Boolean,
+    auto_archive_duration: Schema.Finite.pipe(Schema.optional),
+    locked: Schema.Boolean.pipe(Schema.optional),
+  }).pipe(Schema.optional),
+  type: Schema.Finite,
 });
 
-export const MemberSchema = z.object({
-  avatar: z.string().nullable().optional(),
-  deaf: z.boolean().optional(),
-  joined_at: z.string().optional(),
-  mute: z.boolean().optional(),
-  nick: z.string().nullable().optional(),
-  roles: z.array(snowflakeSchema).optional(),
-  user_id: snowflakeSchema.optional(),
+export const MemberSchema = Schema.Struct({
+  avatar: Schema.String.pipe(Schema.NullOr).pipe(Schema.optional),
+  deaf: Schema.Boolean.pipe(Schema.optional),
+  joined_at: Schema.String.pipe(Schema.optional),
+  mute: Schema.Boolean.pipe(Schema.optional),
+  nick: Schema.String.pipe(Schema.NullOr).pipe(Schema.optional),
+  roles: Schema.Array(snowflakeSchema).pipe(Schema.optional),
+  user_id: snowflakeSchema.pipe(Schema.optional),
 });
 
-export const SearchResponseSchema = z.object({
-  documents_indexed: z.number().optional(),
-  doing_deep_historical_index: z.boolean().optional(),
-  members: z.array(MemberSchema).optional(),
-  messages: z.array(z.array(MessageSchema)),
-  threads: z.array(ThreadSchema).optional(),
-  total_results: z.number(),
+export const SearchResponseSchema = Schema.Struct({
+  documents_indexed: Schema.Finite.pipe(Schema.optional),
+  doing_deep_historical_index: Schema.Boolean.pipe(Schema.optional),
+  members: Schema.Array(MemberSchema).pipe(Schema.optional),
+  messages: Schema.Array(Schema.Array(MessageSchema)),
+  threads: Schema.Array(ThreadSchema).pipe(Schema.optional),
+  total_results: Schema.Finite,
 });
 
-export const RateLimitBodySchema = z.object({
-  retry_after: z.number(),
+export const RateLimitBodySchema = Schema.Struct({
+  retry_after: Schema.Finite,
 });
 
-export const IndexNotReadyResponseSchema = z.object({
-  code: z.number(),
-  documents_indexed: z.number().optional(),
-  message: z.string(),
-  retry_after: z.number(),
+export const IndexNotReadyResponseSchema = Schema.Struct({
+  code: Schema.Finite,
+  documents_indexed: Schema.Finite.pipe(Schema.optional),
+  message: Schema.String,
+  retry_after: Schema.Finite,
 });
 
-export const SearchParamsSchema = z.object({
-  attachmentExtension: z.array(z.string()).optional(),
-  attachmentFilename: z.array(z.string()).optional(),
-  authorId: snowflakeArraySchema.optional(),
-  authorType: z.array(z.enum(["user", "bot", "webhook"])).optional(),
-  channelId: snowflakeArraySchema.optional(),
-  content: z.string().optional(),
-  embedProvider: z.array(z.string()).optional(),
-  embedType: z
-    .array(z.enum(["image", "video", "gif", "sound", "article"]))
-    .optional(),
-  guildId: snowflakeSchema,
-  has: z
-    .array(
-      z.enum([
-        "image",
-        "sound",
-        "video",
-        "file",
-        "sticker",
-        "embed",
-        "link",
-        "poll",
-        "snapshot",
-      ])
-    )
-    .optional(),
-  includeNsfw: z.boolean().optional(),
-  limit: z.number().int().min(1).optional(),
-  linkHostname: z.array(z.string()).optional(),
-  maxId: snowflakeSchema.optional(),
-  mentionEveryone: z.boolean().optional(),
-  mentions: snowflakeArraySchema.optional(),
-  mentionsRoleId: snowflakeArraySchema.optional(),
-  minId: snowflakeSchema.optional(),
-  offset: z.number().int().min(0).max(MAX_OFFSET).optional(),
-  pinned: z.boolean().optional(),
-  repliedToMessageId: snowflakeArraySchema.optional(),
-  repliedToUserId: snowflakeArraySchema.optional(),
-  slop: z.number().int().min(0).optional(),
-  sortBy: z.enum(["timestamp", "relevance"]).optional(),
-  sortOrder: z.enum(["asc", "desc"]).optional(),
+export const SearchParamsSchema = Schema.Struct({
+  attachmentExtension: Schema.Array(Schema.String).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  attachmentFilename: Schema.Array(Schema.String).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  authorId: snowflakeArraySchema.pipe(Schema.optional, Schema.mutableKey),
+  authorType: Schema.Array(Schema.Literals(["user", "bot", "webhook"])).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  channelId: snowflakeArraySchema.pipe(Schema.optional, Schema.mutableKey),
+  content: Schema.String.pipe(Schema.optional, Schema.mutableKey),
+  embedProvider: Schema.Array(Schema.String).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  embedType: Schema.Array(
+    Schema.Literals(["image", "video", "gif", "sound", "article"])
+  ).pipe(Schema.optional, Schema.mutableKey),
+  guildId: snowflakeSchema.pipe(Schema.mutableKey),
+  has: Schema.Array(
+    Schema.Literals([
+      "image",
+      "sound",
+      "video",
+      "file",
+      "sticker",
+      "embed",
+      "link",
+      "poll",
+      "snapshot",
+    ])
+  ).pipe(Schema.optional, Schema.mutableKey),
+  includeNsfw: Schema.Boolean.pipe(Schema.optional, Schema.mutableKey),
+  limit: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  linkHostname: Schema.Array(Schema.String).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  maxId: snowflakeSchema.pipe(Schema.optional, Schema.mutableKey),
+  mentionEveryone: Schema.Boolean.pipe(Schema.optional, Schema.mutableKey),
+  mentions: snowflakeArraySchema.pipe(Schema.optional, Schema.mutableKey),
+  mentionsRoleId: snowflakeArraySchema.pipe(Schema.optional, Schema.mutableKey),
+  minId: snowflakeSchema.pipe(Schema.optional, Schema.mutableKey),
+  offset: Schema.Int.check(
+    Schema.isBetween({ minimum: 0, maximum: MAX_OFFSET })
+  ).pipe(Schema.optional, Schema.mutableKey),
+  pinned: Schema.Boolean.pipe(Schema.optional, Schema.mutableKey),
+  repliedToMessageId: snowflakeArraySchema.pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  repliedToUserId: snowflakeArraySchema.pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  slop: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  sortBy: Schema.Literals(["timestamp", "relevance"]).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
+  sortOrder: Schema.Literals(["asc", "desc"]).pipe(
+    Schema.optional,
+    Schema.mutableKey
+  ),
 });
 
 /** Inferred Discord embed payload. */
-export type Embed = z.infer<typeof EmbedSchema>;
+export type Embed = typeof EmbedSchema.Type;
 
 /** Inferred embed field payload. */
-export type EmbedField = z.infer<typeof EmbedFieldSchema>;
+export type EmbedField = typeof EmbedFieldSchema.Type;
 
 /** Inferred Discord user payload. */
-export type User = z.infer<typeof UserSchema>;
+export type User = typeof UserSchema.Type;
 
 /** Inferred Discord message payload. */
-export type Message = z.infer<typeof MessageSchema>;
+export type Message = typeof MessageSchema.Type;
 
 /** Inferred Discord thread payload. */
-export type Thread = z.infer<typeof ThreadSchema>;
+export type Thread = typeof ThreadSchema.Type;
 
 /** Inferred Discord guild-member payload. */
-export type Member = z.infer<typeof MemberSchema>;
+export type Member = typeof MemberSchema.Type;
 
 /** Inferred Discord message-search response. */
-export type SearchResponse = z.infer<typeof SearchResponseSchema>;
+export type SearchResponse = typeof SearchResponseSchema.Type;
 
 /** Inferred response returned while Discord indexes search results. */
-export type IndexNotReadyResponse = z.infer<typeof IndexNotReadyResponseSchema>;
+export type IndexNotReadyResponse = typeof IndexNotReadyResponseSchema.Type;
 
 /** Inferred and validated search filter parameters. */
-export type SearchParams = z.infer<typeof SearchParamsSchema>;
+export type SearchParams = typeof SearchParamsSchema.Type;

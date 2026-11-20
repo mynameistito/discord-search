@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 
-import { Result } from "better-result";
+import { Effect } from "effect";
 
 import type { CollatedData } from "@/collate.ts";
 import { ExportError } from "@/errors.ts";
@@ -27,8 +27,8 @@ const toCsvRow = (fields: string[]) => fields.map(escapeCsvField).join(",");
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportJson = async (data: CollatedData, filePath: string) =>
-  await Result.tryPromise({
+export const exportJson = (data: CollatedData, filePath: string) =>
+  Effect.tryPromise({
     catch: (cause) =>
       new ExportError({
         cause,
@@ -61,8 +61,8 @@ export const exportJson = async (data: CollatedData, filePath: string) =>
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportMessagesCsv = async (data: CollatedData, filePath: string) =>
-  await Result.tryPromise({
+export const exportMessagesCsv = (data: CollatedData, filePath: string) =>
+  Effect.tryPromise({
     catch: (cause) =>
       new ExportError({
         cause,
@@ -110,8 +110,8 @@ export const exportMessagesCsv = async (data: CollatedData, filePath: string) =>
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportEmbedsCsv = async (data: CollatedData, filePath: string) =>
-  await Result.tryPromise({
+export const exportEmbedsCsv = (data: CollatedData, filePath: string) =>
+  Effect.tryPromise({
     catch: (cause) =>
       new ExportError({
         cause,
@@ -165,8 +165,8 @@ export const exportEmbedsCsv = async (data: CollatedData, filePath: string) =>
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportFieldsCsv = async (data: CollatedData, filePath: string) =>
-  await Result.tryPromise({
+export const exportFieldsCsv = (data: CollatedData, filePath: string) =>
+  Effect.tryPromise({
     catch: (cause) =>
       new ExportError({
         cause,

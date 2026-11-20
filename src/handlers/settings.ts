@@ -1,13 +1,15 @@
 import { confirm, log, password, select, text } from "@clack/prompts";
-import { Result } from "better-result";
+import { Result } from "effect";
 
 import {
   parseBooleanPrompt,
   parseTextPrompt,
   promptForToken,
 } from "@/cli/prompts.ts";
+import { runOperation } from "@/cli/runtime.ts";
 import { generateInviteLink, saveSettings } from "@/config.ts";
-import type { loadConfig, SettingsJson } from "@/config.ts";
+import type { Config, SettingsJson } from "@/config.ts";
+import type { ConfigError } from "@/errors.ts";
 import type { AppState } from "@/types.ts";
 
 const showCurrentSettings = (state: AppState) => {
@@ -46,17 +48,17 @@ export const saveStateToSettings = async (state: AppState) => {
     values.guildId = state.defaultGuildId;
   }
 
-  const result = await saveSettings(values);
+  const result = await runOperation(saveSettings(values));
 
-  if (result.isOk()) {
+  if (Result.isSuccess(result)) {
     log.success("Saved settings to ~/.discord-search/settings.json");
 
-    return Result.ok();
+    return Result.succeed(undefined);
   }
 
-  log.error(`Failed to save settings: ${result.error.message}`);
+  log.error(`Failed to save settings: ${result.failure.message}`);
 
-  return Result.err(result.error);
+  return Result.fail(result.failure);
 };
 
 const handleSettingsAction = async (action: string, state: AppState) => {
@@ -141,14 +143,14 @@ export const handleSettings = async (state: AppState) => {
  */
 export const resolveToken = async (
   cliToken: string | undefined,
-  configResult: Awaited<ReturnType<typeof loadConfig>>
+  configResult: Result.Result<Config, ConfigError>
 ) => {
   if (cliToken !== undefined && cliToken.length > 0) {
     return cliToken;
   }
 
-  if (configResult.isOk()) {
-    return configResult.value.token;
+  if (Result.isSuccess(configResult)) {
+    return configResult.success.token;
   }
 
   log.warn("No DISCORD_BOT_TOKEN found in environment or settings.");
@@ -180,17 +182,17 @@ export const resolveToken = async (
  */
 export const resolveTokenNonInteractive = (
   cliToken: string | undefined,
-  configResult: Awaited<ReturnType<typeof loadConfig>>
+  configResult: Result.Result<Config, ConfigError>
 ) => {
   if (cliToken !== undefined && cliToken.length > 0) {
-    return Result.ok(cliToken);
+    return Result.succeed(cliToken);
   }
 
-  if (configResult.isOk()) {
-    return Result.ok(configResult.value.token);
+  if (Result.isSuccess(configResult)) {
+    return Result.succeed(configResult.success.token);
   }
 
-  return Result.err(
+  return Result.fail(
     new Error("No token found. Provide --token or set DISCORD_BOT_TOKEN.")
   );
 };
@@ -246,9 +248,9 @@ export const setSettingNonInteractive = async (
 
   const result = await saveStateToSettings(state);
 
-  if (result.isErr()) {
+  if (Result.isFailure(result)) {
     process.stderr.write(
-      `Failed to persist setting: ${result.error.message}\n`
+      `Failed to persist setting: ${result.failure.message}\n`
     );
     process.exit(1);
   }

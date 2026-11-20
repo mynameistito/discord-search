@@ -19,7 +19,7 @@ CLI application for Discord message search with config management, preset CRUD, 
 
 - Use `type` keyword exclusively, never `interface`
 - Error handling via TaggedError pattern with descriptive error tags
-- All async operations use `async/await` with proper error propagation
+- Use Effect for application operations and async/await for CLI prompts and rendering
 - File I/O operations go through paths.ts for consistent path handling
 - State management through config.ts:loadConfig()/saveConfig()
 

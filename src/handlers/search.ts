@@ -1,10 +1,11 @@
 import { log, select, spinner } from "@clack/prompts";
-import { matchError } from "better-result";
+import { Result, Match } from "effect";
 
 import { ANSI_DIM, ANSI_RESET } from "@/cli/ansi.ts";
 import { browseMessages } from "@/cli/browser.ts";
 import { createKeyListener } from "@/cli/keys.ts";
 import { parseTextPrompt } from "@/cli/prompts.ts";
+import { runSearch } from "@/cli/runtime.ts";
 import { collateResults } from "@/collate.ts";
 import type { Message, SearchParams } from "@/discord/schemas.ts";
 import { searchAllMessages } from "@/discord/search.ts";
@@ -175,30 +176,32 @@ export const executeSearch = async (
     }
   });
 
-  const result = await searchAllMessages(
-    searchParams,
-    token,
-    (progress) => {
-      s.message(
-        `Fetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})${liveView ? " [LIVE]" : ""}`
-      );
-    },
-    (pageMessages) => {
-      if (!liveView) {
-        return;
-      }
+  const result = await runSearch(
+    searchAllMessages(
+      searchParams,
+      token,
+      (progress) => {
+        s.message(
+          `Fetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})${liveView ? " [LIVE]" : ""}`
+        );
+      },
+      (pageMessages) => {
+        if (!liveView) {
+          return;
+        }
 
-      for (const msg of pageMessages) {
-        process.stdout.write(`\n${JSON.stringify(msg)}\n`);
+        for (const msg of pageMessages) {
+          process.stdout.write(`\n${JSON.stringify(msg)}\n`);
+        }
       }
-    }
+    )
   );
 
   cleanupKeys();
 
-  if (result.isErr()) {
+  if (Result.isFailure(result)) {
     s.stop("Search failed.");
-    matchError(result.error, {
+    Match.valueTags(result.failure, {
       DiscordApiError: handleDiscordApiError,
       IndexNotReadyError: handleIndexNotReadyError,
       RateLimitExhaustedError: handleRateLimitError,
@@ -208,17 +211,17 @@ export const executeSearch = async (
     return;
   }
 
-  s.stop(`Found ${result.value.length.toLocaleString()} messages.`);
+  s.stop(`Found ${result.success.length.toLocaleString()} messages.`);
 
-  if (result.value.length === 0) {
+  if (result.success.length === 0) {
     log.info("No messages matched your search.");
 
     return;
   }
 
-  const collated = collateResults(result.value);
+  const collated = collateResults(result.success);
   displaySummary(collated);
-  await handlePostSearch(collated, result.value, searchParams.guildId);
+  await handlePostSearch(collated, result.success, searchParams.guildId);
 };
 
 /**
@@ -237,16 +240,18 @@ export const executeNonInteractiveSearch = async (
     json: boolean;
   }
 ) => {
-  const result = await searchAllMessages(searchParams, token, (progress) => {
-    process.stderr.write(
-      `\rFetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
-    );
-  });
+  const result = await runSearch(
+    searchAllMessages(searchParams, token, (progress) => {
+      process.stderr.write(
+        `\rFetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
+      );
+    })
+  );
 
   process.stderr.write("\n");
 
-  if (result.isErr()) {
-    matchError(result.error, {
+  if (Result.isFailure(result)) {
+    Match.valueTags(result.failure, {
       DiscordApiError: writeDiscordApiError,
       IndexNotReadyError: writeIndexNotReadyError,
       RateLimitExhaustedError: writeRateLimitError,
@@ -255,7 +260,7 @@ export const executeNonInteractiveSearch = async (
     process.exit(1);
   }
 
-  const messages = result.value;
+  const messages = result.success;
   process.stderr.write(`Found ${messages.length.toLocaleString()} messages.\n`);
 
   if (messages.length === 0) {

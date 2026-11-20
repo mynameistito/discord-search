@@ -1,153 +1,166 @@
 import { chmod, readFile, writeFile } from "node:fs/promises";
 
-import { Err, Ok } from "better-result";
-import { z } from "zod";
+import { Config as Env, Effect, Option, Redacted, Schema } from "effect";
 
 import { ConfigError, ExportError } from "@/errors.ts";
 import { ensureAppDir, SETTINGS_FILE } from "@/paths.ts";
 
-const SettingsSchema = z.object({
-  clientId: z.string().optional(),
-  guildId: z.string().optional(),
-  token: z.string().optional(),
+const SettingsSchema = Schema.Struct({
+  clientId: Schema.String.pipe(Schema.optional, Schema.mutableKey),
+  guildId: Schema.String.pipe(Schema.optional, Schema.mutableKey),
+  token: Schema.String.pipe(Schema.optional, Schema.mutableKey),
 });
 
+const emptySettings: SettingsJson = {};
+
+const SettingsText = Schema.fromJsonString(SettingsSchema);
+
 /** Configuration required to make authenticated Discord requests. */
-export interface Config {
+export type Config = {
   clientId: string | undefined;
   defaultGuildId: string | undefined;
   token: string;
-}
+};
 
 /** Settings persisted by the CLI. */
-export type SettingsJson = z.infer<typeof SettingsSchema>;
+export type SettingsJson = typeof SettingsSchema.Type;
 
-const readSettingsFile = async () => {
-  let text: string;
+const readSettingsFile = Effect.fn("Settings.read")(
+  function* readSettingsFile() {
+    const text = yield* Effect.tryPromise({
+      try: async () => await readFile(SETTINGS_FILE, "utf-8"),
+      catch: (error) => error,
+    }).pipe(
+      Effect.catchIf(
+        (error) =>
+          error instanceof Error && "code" in error && error.code === "ENOENT",
+        () => Effect.succeed("{}")
+      )
+    );
 
-  try {
-    text = await readFile(SETTINGS_FILE, "utf-8");
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return {};
-    }
-
-    throw error;
-  }
-
-  try {
-    const parsed: unknown = z.unknown().parse(JSON.parse(text));
-
-    const result = SettingsSchema.safeParse(parsed);
-
-    if (!result.success) {
-      return {};
-    }
-
-    return result.data;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return {};
-    }
-
-    throw error;
-  }
-};
-
-/**
- * Load settings from disk and environment variables.
- *
- * @returns The resolved config, or a typed configuration error.
- */
-export const loadConfig = async () => {
-  let settings: SettingsJson;
-
-  try {
-    settings = await readSettingsFile();
-  } catch (error) {
-    return new Err(
-      new ConfigError({
-        message: `Failed to read settings: ${error instanceof Error ? error.message : String(error)}`,
-      })
+    return yield* Schema.decodeUnknownEffect(SettingsText)(text).pipe(
+      Effect.orElseSucceed(() => emptySettings)
     );
   }
+);
 
-  const token = process.env.DISCORD_BOT_TOKEN ?? settings.token;
+/** Resolve settings from disk and environment variables. */
+export const loadConfig = Effect.fn("Settings.load")(function* loadConfig() {
+  const settings = yield* readSettingsFile().pipe(
+    Effect.mapError(
+      (cause) =>
+        new ConfigError({
+          message: `Failed to read settings: ${cause instanceof Error ? cause.message : String(cause)}`,
+        })
+    )
+  );
+
+  const { tokenEnv, clientId, guildId } = yield* Env.all({
+    tokenEnv: Env.option(Env.Redacted("DISCORD_BOT_TOKEN")),
+    clientId: Env.option(Env.String("DISCORD_CLIENT_ID")),
+    guildId: Env.option(Env.String("DISCORD_GUILD_ID")),
+  }).pipe(
+    Effect.mapError(
+      () =>
+        new ConfigError({
+          message: "Failed to read Discord environment configuration",
+        })
+    )
+  );
+
+  const token = Option.match(tokenEnv, {
+    onNone: () => settings.token,
+    onSome: Redacted.value,
+  });
 
   if (token === undefined || token.length === 0) {
-    return new Err(
-      new ConfigError({
-        message:
-          "DISCORD_BOT_TOKEN is not set. Set it via environment variable or run the app to save settings to ~/.discord-search/settings.json.",
-      })
-    );
-  }
-
-  return new Ok({
-    clientId: process.env.DISCORD_CLIENT_ID ?? settings.clientId,
-    defaultGuildId: process.env.DISCORD_GUILD_ID ?? settings.guildId,
-    token,
-  });
-};
-
-/**
- * Validate, merge, and persist settings with owner-only permissions.
- *
- * @param values - The settings to persist.
- * @returns Success or a typed persistence error.
- */
-export const saveSettings = async (values: SettingsJson) => {
-  try {
-    const validationResult = SettingsSchema.safeParse(values);
-
-    if (!validationResult.success) {
-      return new Err(
-        new ExportError({
-          cause: new Error(validationResult.error.message),
-          message: `Invalid settings data: ${validationResult.error.message}`,
-        })
-      );
-    }
-
-    await ensureAppDir();
-
-    const existing = await readSettingsFile();
-
-    const merged = { ...existing, ...validationResult.data };
-
-    await writeFile(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`, {
-      mode: 0o600,
+    return yield* new ConfigError({
+      message:
+        "DISCORD_BOT_TOKEN is not set. Set it via environment variable or run the app to save settings to ~/.discord-search/settings.json.",
     });
-
-    try {
-      await chmod(SETTINGS_FILE, 0o600);
-    } catch (error) {
-      if (
-        !(
-          error instanceof Error &&
-          "code" in error &&
-          (error.code === "ENOTSUP" || error.code === "EINVAL")
-        )
-      ) {
-        return new Err(
-          new ExportError({
-            cause: error,
-            message: `Failed to secure settings file permissions: ${error instanceof Error ? error.message : String(error)}`,
-          })
-        );
-      }
-    }
-
-    return new Ok(undefined);
-  } catch (error) {
-    return new Err(
-      new ExportError({
-        cause: error,
-        message: `Failed to save settings: ${error instanceof Error ? error.message : String(error)}`,
-      })
-    );
   }
-};
+
+  return {
+    clientId: Option.getOrUndefined(clientId) ?? settings.clientId,
+    defaultGuildId: Option.getOrUndefined(guildId) ?? settings.guildId,
+    token,
+  };
+});
+
+/** Validate, merge, and persist settings with owner-only permissions. */
+export const saveSettings = Effect.fn("Settings.save")(function* saveSettings(
+  values: SettingsJson
+) {
+  const validated = yield* Schema.decodeUnknownEffect(SettingsSchema)(
+    values
+  ).pipe(
+    Effect.mapError(
+      (cause) =>
+        new ExportError({
+          cause,
+          message: `Invalid settings data: ${cause.message}`,
+        })
+    )
+  );
+
+  yield* Effect.tryPromise({
+    try: async () => {
+      await ensureAppDir();
+    },
+    catch: (cause) =>
+      new ExportError({
+        cause,
+        message: `Failed to save settings: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
+  });
+
+  const existing = yield* readSettingsFile().pipe(
+    Effect.mapError(
+      (cause) =>
+        new ExportError({
+          cause,
+          message: `Failed to save settings: ${cause instanceof Error ? cause.message : String(cause)}`,
+        })
+    )
+  );
+
+  const merged = { ...existing, ...validated };
+
+  yield* Effect.tryPromise({
+    try: async () => {
+      await writeFile(SETTINGS_FILE, `${JSON.stringify(merged, null, 2)}\n`, {
+        mode: 0o600,
+      });
+    },
+    catch: (cause) =>
+      new ExportError({
+        cause,
+        message: `Failed to save settings: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
+  });
+
+  yield* Effect.tryPromise({
+    try: async () => {
+      await chmod(SETTINGS_FILE, 0o600);
+    },
+    catch: (cause) => cause,
+  }).pipe(
+    Effect.catchIf(
+      (error) =>
+        error instanceof Error &&
+        "code" in error &&
+        (error.code === "ENOTSUP" || error.code === "EINVAL"),
+      () => Effect.void
+    ),
+    Effect.mapError(
+      (cause) =>
+        new ExportError({
+          cause,
+          message: `Failed to secure settings file permissions: ${cause instanceof Error ? cause.message : String(cause)}`,
+        })
+    )
+  );
+});
 
 const BOT_PERMISSION_FLAGS = {
   READ_MESSAGE_HISTORY: 65_536,

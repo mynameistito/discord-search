@@ -1,8 +1,8 @@
-import { TaggedError } from "better-result";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error raised when application configuration cannot be loaded. */
-export class ConfigError extends defineTaggedError("ConfigError")<{
-  message: string;
-}> {}
+export class ConfigError extends taggedError<ConfigError>()("ConfigError", {
+  message: Schema.String,
+}) {}

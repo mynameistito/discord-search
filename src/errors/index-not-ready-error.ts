@@ -1,11 +1,12 @@
-import { TaggedError } from "better-result";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error returned while Discord is still indexing search results. */
-export class IndexNotReadyError extends defineTaggedError(
-  "IndexNotReadyError"
-)<{
-  message: string;
-  retryAfter: number;
-}> {}
+export class IndexNotReadyError extends taggedError<IndexNotReadyError>()(
+  "IndexNotReadyError",
+  {
+    message: Schema.String,
+    retryAfter: Schema.Number,
+  }
+) {}

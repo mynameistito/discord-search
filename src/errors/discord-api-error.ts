@@ -1,10 +1,13 @@
-import { TaggedError } from "better-result";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error returned for failures communicating with Discord. */
-export class DiscordApiError extends defineTaggedError("DiscordApiError")<{
-  body: unknown;
-  message: string;
-  status: number;
-}> {}
+export class DiscordApiError extends taggedError<DiscordApiError>()(
+  "DiscordApiError",
+  {
+    body: Schema.Unknown,
+    message: Schema.String,
+    status: Schema.Number,
+  }
+) {}

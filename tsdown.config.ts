@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   clean: true,
   deps: {
-    alwaysBundle: ["@clack/prompts", "better-result", "zod"],
+    alwaysBundle: ["@clack/prompts", /^effect(?:\/|$)/u],
     onlyBundle: false,
   },
   dts: true,

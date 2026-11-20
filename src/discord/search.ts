@@ -1,29 +1,13 @@
-import { Ok, Result } from "better-result";
+import { Effect, Redacted, Schema } from "effect";
 
-import { discordFetch } from "@/discord/client.ts";
+import { DiscordClient } from "@/discord/client.ts";
 import {
   MAX_OFFSET,
   MAX_PAGE_SIZE,
   SearchParamsSchema,
-  SearchResponseSchema,
 } from "@/discord/schemas.ts";
 import type { Message, SearchParams } from "@/discord/schemas.ts";
 import { ValidationError } from "@/errors.ts";
-
-const validateSearchParams = (params: SearchParams) => {
-  const parsed = SearchParamsSchema.safeParse(params);
-
-  if (!parsed.success) {
-    return Result.err(
-      new ValidationError({
-        issues: parsed.error.issues,
-        message: "Invalid search parameters",
-      })
-    );
-  }
-
-  return Result.ok(parsed.data);
-};
 
 const buildQueryString = (
   params: SearchParams,
@@ -78,7 +62,7 @@ const buildQueryString = (
     qs.set("min_id", params.minId);
   }
 
-  const arrayParams: [string, string[] | undefined][] = [
+  const arrayParams: [string, readonly string[] | undefined][] = [
     ["channel_id", params.channelId],
     ["author_id", params.authorId],
     ["author_type", params.authorType],
@@ -105,47 +89,11 @@ const buildQueryString = (
   return qs.toString();
 };
 
-const fetchSearch = async (
-  params: SearchParams,
-  token: string,
-  offset: number,
-  maxId?: string
-) => {
-  const queryString = buildQueryString(params, offset, maxId);
-  const encodedGuildId = encodeURIComponent(params.guildId);
-  const path = `/guilds/${encodedGuildId}/messages/search?${queryString}`;
-
-  return await discordFetch(path, SearchResponseSchema, token);
-};
-
-/** Search Discord messages using validated parameters.
- *
- * @param params - Validated message search filters.
- * @param token - Discord bot token.
- * @param offset - Initial result offset.
- * @param maxId - Optional upper snowflake bound.
- * @returns The search response or a typed search error.
- */
-export const searchMessages = async (
-  params: SearchParams,
-  token: string,
-  offset = 0,
-  maxId?: string
-) => {
-  const validatedParams = validateSearchParams(params);
-
-  if (validatedParams.isErr()) {
-    return Result.err(validatedParams.error);
-  }
-
-  return await fetchSearch(validatedParams.value, token, offset, maxId);
-};
-
 /** Progress emitted while paginating Discord search results. */
-export interface SearchProgress {
+export type SearchProgress = {
   fetched: number;
   total: number;
-}
+};
 
 /** Report the number of search results retrieved so far. */
 export type ProgressCallback = (progress: SearchProgress) => void;
@@ -153,230 +101,138 @@ export type ProgressCallback = (progress: SearchProgress) => void;
 /** Receive each page of messages as soon as it is fetched. */
 export type PageCallback = (messages: Message[]) => void;
 
-interface PaginationState {
-  allMessages: Message[];
-  totalResults: number;
-}
+const validateSearchParams = (params: SearchParams) =>
+  Schema.decodeUnknownEffect(SearchParamsSchema)(params).pipe(
+    Effect.mapError(
+      () => new ValidationError({ message: "Invalid search parameters" })
+    )
+  );
 
-const fetchPage = async (
-  params: SearchParams,
-  token: string,
-  offset: number,
-  maxId: string | undefined,
-  state: PaginationState,
-  maxMessages: number | undefined,
-  onProgress?: ProgressCallback,
-  onPage?: PageCallback
-) => {
-  const result = await fetchSearch(params, token, offset, maxId);
-
-  if (result.isErr()) {
-    return Result.err(result.error);
-  }
-
-  const data = result.value;
-
-  const pageSize =
-    params.limit === undefined
-      ? MAX_PAGE_SIZE
-      : Math.min(params.limit, MAX_PAGE_SIZE);
-
-  if (state.totalResults === 0) {
-    state.totalResults =
-      maxMessages === undefined
-        ? data.total_results
-        : Math.min(data.total_results, maxMessages);
-  }
-
-  let pageMessages = data.messages
-    .map((group) => group[0])
-    .filter((msg): msg is Message => msg !== undefined);
-
-  if (pageMessages.length === 0) {
-    onProgress?.({
-      fetched: state.allMessages.length,
-      total: state.totalResults,
-    });
-
-    return new Ok("done" as const);
-  }
-
-  if (
-    maxMessages !== undefined &&
-    state.allMessages.length + pageMessages.length > maxMessages
+/** Search Discord messages using validated parameters. */
+export const searchMessages = Effect.fn("Search.searchMessages")(
+  function* searchMessages(
+    params: SearchParams,
+    token: string,
+    offset?: number,
+    maxId?: string
   ) {
-    pageMessages = pageMessages.slice(
-      0,
-      maxMessages - state.allMessages.length
-    );
+    const validated = yield* validateSearchParams(params);
+    const client = yield* DiscordClient;
+
+    return yield* client.search({
+      guildId: validated.guildId,
+      query: buildQueryString(validated, offset ?? 0, maxId),
+      token: Redacted.make(token),
+    });
   }
+);
 
-  for (const msg of pageMessages) {
-    state.allMessages.push(msg);
-  }
-
-  onPage?.(pageMessages);
-  onProgress?.({
-    fetched: state.allMessages.length,
-    total: state.totalResults,
-  });
-
-  if (state.allMessages.length >= state.totalResults) {
-    return new Ok("done" as const);
-  }
-
-  if (pageMessages.length < pageSize) {
-    return new Ok("break" as const);
-  }
-
-  return new Ok("continue" as const);
-};
-
-interface PaginationConfig {
-  searchParams: SearchParams;
-  token: string;
-  startOffset: number;
-  maxMessages: number | undefined;
-  pageSize: number;
-  onProgress?: ProgressCallback;
-  onPage?: PageCallback;
-}
-
-const fetchPartitionPage = async (
-  config: PaginationConfig,
-  state: PaginationState,
-  maxId: string | undefined,
-  offset: number
-) => {
-  if (offset > MAX_OFFSET) {
-    return new Ok("continue" as const);
-  }
-
-  const pageResult = await fetchPage(
-    config.searchParams,
-    config.token,
-    offset,
-    maxId,
-    state,
-    config.maxMessages,
-    config.onProgress,
-    config.onPage
-  );
-
-  if (pageResult.isErr()) {
-    return Result.err(pageResult.error);
-  }
-
-  if (pageResult.value === "done") {
-    return new Ok("done" as const);
-  }
-
-  if (pageResult.value === "break") {
-    return new Ok("continue" as const);
-  }
-
-  return await fetchPartitionPage(
-    config,
-    state,
-    maxId,
-    offset + config.pageSize
-  );
-};
-
-/** Search Discord messages and paginate through all matching results.
- *
- * @param params - Validated message search filters.
- * @param token - Discord bot token.
- * @param onProgress - Optional callback for pagination progress.
- * @param onPage - Optional callback for each fetched page.
- * @param maxMessages - Optional maximum number of messages to fetch.
- * @returns All matching messages or a typed search error.
- */
-export const searchAllMessages = async (
-  params: SearchParams,
-  token: string,
-  onProgress?: ProgressCallback,
-  onPage?: PageCallback,
-  maxMessages?: number
-) => {
-  const validatedParams = validateSearchParams(params);
-
-  if (validatedParams.isErr()) {
-    return Result.err(validatedParams.error);
-  }
-
-  const queryParams = validatedParams.value;
-
-  if (queryParams.sortBy !== undefined && queryParams.sortBy !== "timestamp") {
-    return Result.err(
-      new ValidationError({
-        issues: [],
+const validatePaginationOrder = Effect.fn("Search.validatePaginationOrder")(
+  function* validatePaginationOrder(queryParams: SearchParams) {
+    if (
+      queryParams.sortBy !== undefined &&
+      queryParams.sortBy !== "timestamp"
+    ) {
+      return yield* new ValidationError({
         message:
           "searchAllMessages requires sortBy: 'timestamp' for snowflake-based pagination",
-      })
-    );
-  }
+      });
+    }
 
-  if (queryParams.sortOrder !== undefined && queryParams.sortOrder !== "desc") {
-    return Result.err(
-      new ValidationError({
-        issues: [],
+    if (
+      queryParams.sortOrder !== undefined &&
+      queryParams.sortOrder !== "desc"
+    ) {
+      return yield* new ValidationError({
         message:
           "searchAllMessages requires sortOrder: 'desc' for snowflake-based pagination",
-      })
-    );
+      });
+    }
+
+    return null;
   }
+);
 
-  const config: PaginationConfig = {
-    maxMessages,
-    onPage,
-    onProgress,
-    token,
-    pageSize:
-      queryParams.limit === undefined
-        ? MAX_PAGE_SIZE
-        : Math.min(queryParams.limit, MAX_PAGE_SIZE),
-    searchParams: { ...queryParams, sortBy: "timestamp", sortOrder: "desc" },
-    startOffset: queryParams.offset ?? 0,
-  };
+/** Search Discord messages and paginate through all matching results. */
+export const searchAllMessages = Effect.fn("Search.searchAllMessages")(
+  function* searchAllMessages(
+    params: SearchParams,
+    token: string,
+    onProgress?: ProgressCallback,
+    onPage?: PageCallback,
+    maxMessages?: number
+  ) {
+    const queryParams = yield* validateSearchParams(params);
 
-  const state: PaginationState = { allMessages: [], totalResults: 0 };
+    yield* validatePaginationOrder(queryParams);
 
-  const fetchPartitions = async (currentMaxId: string | null) => {
-    const initialOffset = currentMaxId === null ? config.startOffset : 0;
+    const client = yield* DiscordClient;
 
-    const result = await fetchPartitionPage(
-      config,
-      state,
-      currentMaxId ?? "",
-      initialOffset
+    const searchParams = {
+      ...queryParams,
+      sortBy: "timestamp",
+      sortOrder: "desc",
+    } as const;
+
+    const credential = Redacted.make(token);
+
+    const pageSize = Math.min(
+      queryParams.limit ?? MAX_PAGE_SIZE,
+      MAX_PAGE_SIZE
     );
 
-    if (result.isErr()) {
-      return Result.err(result.error);
+    const messages: Message[] = [];
+    let total: number | undefined;
+    let { maxId } = queryParams;
+    let offset = queryParams.offset ?? 0;
+
+    for (;;) {
+      const response = yield* client.search({
+        guildId: queryParams.guildId,
+        query: buildQueryString(searchParams, offset, maxId),
+        token: credential,
+      });
+
+      total ??= Math.min(
+        response.total_results,
+        maxMessages ?? response.total_results
+      );
+
+      const page = response.messages.flatMap(([message]) =>
+        message === undefined ? [] : [message]
+      );
+
+      if (page.length === 0) {
+        onProgress?.({ total, fetched: messages.length });
+
+        return messages;
+      }
+
+      const received =
+        maxMessages === undefined
+          ? page
+          : page.slice(0, maxMessages - messages.length);
+
+      messages.push(...received);
+      onPage?.(received);
+      onProgress?.({ total, fetched: messages.length });
+
+      if (messages.length >= total) {
+        return messages;
+      }
+
+      offset += pageSize;
+
+      if (offset > MAX_OFFSET || received.length < pageSize) {
+        const lastId = messages.at(-1)?.id;
+
+        if (lastId === undefined || lastId === maxId) {
+          return messages;
+        }
+
+        maxId = lastId;
+        offset = 0;
+      }
     }
-
-    const shouldStop =
-      result.value === "done" || state.allMessages.length >= state.totalResults;
-
-    if (shouldStop) {
-      return Result.ok(true);
-    }
-
-    const lastMessage = state.allMessages.at(-1);
-
-    if (lastMessage === undefined || currentMaxId === lastMessage.id) {
-      return Result.ok(true);
-    }
-
-    return await fetchPartitions(lastMessage.id);
-  };
-
-  const partitionResult = await fetchPartitions(null);
-
-  if (partitionResult.isErr()) {
-    return Result.err(partitionResult.error);
   }
-
-  return new Ok(state.allMessages);
-};
+);

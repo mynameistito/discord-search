@@ -7,7 +7,7 @@ import {
   select,
   text,
 } from "@clack/prompts";
-import { z } from "zod";
+import { Schema } from "effect";
 
 import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
 import { SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
@@ -29,16 +29,16 @@ const INVALID_INTEGER_MESSAGE = "Must be a number";
 
 const PROMPT_CANCEL_MESSAGE = "Search cancelled.";
 
-const parsePromptResult = <Input, Schema extends z.ZodType<Input>>(
-  input: Input | symbol,
-  schema: Schema
+const parsePromptResult = <S extends Schema.ConstraintDecoder<unknown>>(
+  input: S["Type"] | symbol,
+  schema: S
 ) => {
   if (isCancel(input)) {
     cancel(PROMPT_CANCEL_MESSAGE);
     process.exit(0);
   }
 
-  return schema.parse(input);
+  return Schema.decodeUnknownSync(schema)(input);
 };
 
 /**
@@ -55,7 +55,7 @@ export const handleCancel: CancelPrompt = <T>(
   }
 };
 
-const textResultSchema = z.string();
+const textResultSchema = Schema.String;
 
 /** Parse a text-prompt result, terminating cleanly on cancellation.
  *
@@ -65,7 +65,7 @@ const textResultSchema = z.string();
 export const parseTextPrompt = (input: string | symbol) =>
   parsePromptResult(input, textResultSchema);
 
-const booleanResultSchema = z.boolean();
+const booleanResultSchema = Schema.Boolean;
 
 /** Parse a confirmation result, terminating cleanly on cancellation.
  *
@@ -75,10 +75,12 @@ const booleanResultSchema = z.boolean();
 export const parseBooleanPrompt = (input: boolean | symbol) =>
   parsePromptResult(input, booleanResultSchema);
 
-const authorTypesSchema = z.array(z.enum(["user", "bot", "webhook"]));
+const authorTypesSchema = Schema.Array(
+  Schema.Literals(["user", "bot", "webhook"])
+);
 
-const contentFiltersSchema = z.array(
-  z.enum([
+const contentFiltersSchema = Schema.Array(
+  Schema.Literals([
     "embed",
     "file",
     "image",
@@ -91,9 +93,9 @@ const contentFiltersSchema = z.array(
   ])
 );
 
-const sortBySchema = z.enum(["timestamp", "relevance"]);
+const sortBySchema = Schema.Literals(["timestamp", "relevance"]);
 
-const sortOrderSchema = z.enum(["desc", "asc"]);
+const sortOrderSchema = Schema.Literals(["desc", "asc"]);
 
 type CancelPrompt = <T>(value: T | symbol) => asserts value is T;
 

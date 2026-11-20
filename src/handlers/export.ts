@@ -1,9 +1,10 @@
 import { mkdir } from "node:fs/promises";
 
 import { select, spinner, text } from "@clack/prompts";
-import type { Result } from "better-result";
+import { Result } from "effect";
 
 import { handleCancel, parseTextPrompt } from "@/cli/prompts.ts";
+import { runOperation } from "@/cli/runtime.ts";
 import type { collateResults } from "@/collate.ts";
 import type { ExportError } from "@/errors.ts";
 import {
@@ -55,29 +56,29 @@ export const exportNonInteractive = async (
 
   await mkdir(dir, { recursive: true });
 
-  const exports: Promise<Result<void, ExportError>>[] = [];
+  const exports: Promise<Result.Result<void, ExportError>>[] = [];
 
   if (format === EXPORT_FORMATS.json || format === EXPORT_FORMATS.all) {
-    exports.push(exportJson(data, `${dir}/data.json`));
+    exports.push(runOperation(exportJson(data, `${dir}/data.json`)));
   }
 
   if (format === EXPORT_FORMATS.csvMessages || format === EXPORT_FORMATS.all) {
-    exports.push(exportMessagesCsv(data, `${dir}/messages.csv`));
+    exports.push(runOperation(exportMessagesCsv(data, `${dir}/messages.csv`)));
   }
 
   if (format === EXPORT_FORMATS.csvEmbeds || format === EXPORT_FORMATS.all) {
-    exports.push(exportEmbedsCsv(data, `${dir}/embeds.csv`));
+    exports.push(runOperation(exportEmbedsCsv(data, `${dir}/embeds.csv`)));
   }
 
   if (format === EXPORT_FORMATS.csvFields || format === EXPORT_FORMATS.all) {
-    exports.push(exportFieldsCsv(data, `${dir}/fields.csv`));
+    exports.push(runOperation(exportFieldsCsv(data, `${dir}/fields.csv`)));
   }
 
   const results = await Promise.all(exports);
-  const failed = results.find((r) => r.isErr());
+  const failed = results.find((r) => Result.isFailure(r));
 
   if (failed) {
-    throw failed.error;
+    throw failed.failure;
   }
 
   return dir;
@@ -126,29 +127,29 @@ export const handleExport = async (
 
   await mkdir(dir, { recursive: true });
 
-  const exports: Promise<Result<void, ExportError>>[] = [];
+  const exports: Promise<Result.Result<void, ExportError>>[] = [];
 
   if (format === EXPORT_FORMATS.json || format === EXPORT_FORMATS.all) {
-    exports.push(exportJson(data, `${dir}/data.json`));
+    exports.push(runOperation(exportJson(data, `${dir}/data.json`)));
   }
 
   if (format === EXPORT_FORMATS.csvMessages || format === EXPORT_FORMATS.all) {
-    exports.push(exportMessagesCsv(data, `${dir}/messages.csv`));
+    exports.push(runOperation(exportMessagesCsv(data, `${dir}/messages.csv`)));
   }
 
   if (format === EXPORT_FORMATS.csvEmbeds || format === EXPORT_FORMATS.all) {
-    exports.push(exportEmbedsCsv(data, `${dir}/embeds.csv`));
+    exports.push(runOperation(exportEmbedsCsv(data, `${dir}/embeds.csv`)));
   }
 
   if (format === EXPORT_FORMATS.csvFields || format === EXPORT_FORMATS.all) {
-    exports.push(exportFieldsCsv(data, `${dir}/fields.csv`));
+    exports.push(runOperation(exportFieldsCsv(data, `${dir}/fields.csv`)));
   }
 
   const results = await Promise.all(exports);
-  const failed = results.find((r) => r.isErr());
+  const failed = results.find((r) => Result.isFailure(r));
 
   if (failed) {
-    s.stop(`Export failed: ${failed.error.message}`);
+    s.stop(`Export failed: ${failed.failure.message}`);
 
     return;
   }

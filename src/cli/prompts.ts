@@ -32,7 +32,7 @@ const PROMPT_CANCEL_MESSAGE = "Search cancelled.";
 const parsePromptResult = <Input, Schema extends z.ZodType<Input>>(
   input: Input | symbol,
   schema: Schema
-): z.infer<Schema> => {
+) => {
   if (isCancel(input)) {
     cancel(PROMPT_CANCEL_MESSAGE);
     process.exit(0);
@@ -62,7 +62,7 @@ const textResultSchema = z.string();
  * @param input - Text prompt response or Clack's cancellation symbol.
  * @returns The validated prompt text.
  */
-export const parseTextPrompt = (input: string | symbol): string =>
+export const parseTextPrompt = (input: string | symbol) =>
   parsePromptResult(input, textResultSchema);
 
 const booleanResultSchema = z.boolean();
@@ -72,7 +72,7 @@ const booleanResultSchema = z.boolean();
  * @param input - Confirmation response or Clack's cancellation symbol.
  * @returns The validated confirmation value.
  */
-export const parseBooleanPrompt = (input: boolean | symbol): boolean =>
+export const parseBooleanPrompt = (input: boolean | symbol) =>
   parsePromptResult(input, booleanResultSchema);
 
 const authorTypesSchema = z.array(z.enum(["user", "bot", "webhook"]));
@@ -102,7 +102,7 @@ type CancelPrompt = <T>(value: T | symbol) => asserts value is T;
  *
  * @returns The entered bot token.
  */
-export const promptForToken = async (): Promise<string> =>
+export const promptForToken = async () =>
   parsePromptResult(
     await password({
       message: "Enter your Discord Bot Token:",
@@ -120,9 +120,7 @@ export const promptForToken = async (): Promise<string> =>
  * @param defaultGuildId - Optional guild ID to prefill.
  * @returns The validated search parameters.
  */
-export const promptForSearchParams = async (
-  defaultGuildId?: string
-): Promise<SearchParams> => {
+export const promptForSearchParams = async (defaultGuildId?: string) => {
   const guildId = parsePromptResult(
     await text({
       initialValue: defaultGuildId,

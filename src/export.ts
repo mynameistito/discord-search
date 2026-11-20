@@ -5,7 +5,7 @@ import { Result } from "better-result";
 import type { CollatedData } from "@/collate.ts";
 import { ExportError } from "@/errors.ts";
 
-const escapeCsvField = (value: string): string => {
+const escapeCsvField = (value: string) => {
   if (
     value.includes(",") ||
     value.includes('"') ||
@@ -18,8 +18,7 @@ const escapeCsvField = (value: string): string => {
   return value;
 };
 
-const toCsvRow = (fields: string[]): string =>
-  fields.map(escapeCsvField).join(",");
+const toCsvRow = (fields: string[]) => fields.map(escapeCsvField).join(",");
 
 /**
  * Export collated search data as a formatted JSON file.
@@ -28,10 +27,7 @@ const toCsvRow = (fields: string[]): string =>
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportJson = async (
-  data: CollatedData,
-  filePath: string
-): Promise<Result<void, ExportError>> =>
+export const exportJson = async (data: CollatedData, filePath: string) =>
   await Result.tryPromise({
     catch: (cause) =>
       new ExportError({
@@ -65,10 +61,7 @@ export const exportJson = async (
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportMessagesCsv = async (
-  data: CollatedData,
-  filePath: string
-): Promise<Result<void, ExportError>> =>
+export const exportMessagesCsv = async (data: CollatedData, filePath: string) =>
   await Result.tryPromise({
     catch: (cause) =>
       new ExportError({
@@ -117,10 +110,7 @@ export const exportMessagesCsv = async (
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportEmbedsCsv = async (
-  data: CollatedData,
-  filePath: string
-): Promise<Result<void, ExportError>> =>
+export const exportEmbedsCsv = async (data: CollatedData, filePath: string) =>
   await Result.tryPromise({
     catch: (cause) =>
       new ExportError({
@@ -175,10 +165,7 @@ export const exportEmbedsCsv = async (
  * @param filePath - Destination file path.
  * @returns Success or an export error.
  */
-export const exportFieldsCsv = async (
-  data: CollatedData,
-  filePath: string
-): Promise<Result<void, ExportError>> =>
+export const exportFieldsCsv = async (data: CollatedData, filePath: string) =>
   await Result.tryPromise({
     catch: (cause) =>
       new ExportError({
@@ -186,7 +173,6 @@ export const exportFieldsCsv = async (
         message: `Failed to export fields CSV: ${cause instanceof Error ? cause.message : String(cause)}`,
       }),
     try: async () => {
-      // Collect all unique field names across all extracted fields
       const fieldNames = new Set<string>();
 
       for (const row of data.extractedFields) {

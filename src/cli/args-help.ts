@@ -8,19 +8,17 @@ import {
   ANSI_YELLOW,
 } from "@/cli/ansi.ts";
 
-const heading = (text: string): string =>
+const heading = (text: string) =>
   `${ANSI_CYAN}${ANSI_BOLD}${text}${ANSI_RESET}`;
 
-const opt = (flags: string, desc: string, width = 34): string =>
+const opt = (flags: string, desc: string, width = 34) =>
   `  ${ANSI_YELLOW}${flags.padEnd(width)}${ANSI_RESET}${ANSI_DIM}${desc}${ANSI_RESET}`;
 
-const example = (cmd: string, desc: string, width = 60): string =>
+const example = (cmd: string, desc: string, width = 60) =>
   `  ${ANSI_GREEN}$ ${cmd.padEnd(width)}${ANSI_RESET}${ANSI_DIM}${desc}${ANSI_RESET}`;
 
-const section = (title: string, lines: string[]): string =>
+const section = (title: string, lines: string[]) =>
   `${heading(title)}\n${lines.join("\n")}`;
-
-// --- Shared help sections ---
 
 const GLOBAL_OPTIONS = section("GLOBAL OPTIONS", [
   opt("--help, -h", "Show this help message"),
@@ -97,8 +95,6 @@ const SETTINGS_ACTIONS = section("ACTIONS", [
   opt("invite", "Generate bot invite link"),
 ]);
 
-// --- Per-subcommand help ---
-
 const SEARCH_HELP_TEXT = [
   `${ANSI_BOLD}discord-search search${ANSI_RESET}\n${ANSI_DIM}Search Discord server messages with filters.${ANSI_RESET}`,
   section("USAGE", [
@@ -158,8 +154,6 @@ const SETTINGS_HELP_TEXT = [
     example("discord-search settings invite", "Generate bot invite link"),
   ]),
 ].join("\n\n");
-
-// --- Full help ---
 
 const HELP_TEXT = [
   `${ANSI_BOLD}discord-search${ANSI_RESET}\n${ANSI_DIM}Search Discord server messages from your terminal.${ANSI_RESET}\n${ANSI_DIM}Filter by author, content type, mentions, and more.${ANSI_RESET}`,

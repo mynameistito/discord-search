@@ -10,7 +10,7 @@ interface ListenerState {
  * @param onKey - Callback for each non-exit key.
  * @returns A function that removes the listener and restores stdin settings.
  */
-export const createKeyListener = (onKey: KeyHandler): (() => void) => {
+export const createKeyListener = (onKey: KeyHandler) => {
   if (!process.stdin.isTTY) {
     return () => {
       process.stdin.pause();
@@ -30,7 +30,6 @@ export const createKeyListener = (onKey: KeyHandler): (() => void) => {
   };
 
   const handler = (data: string) => {
-    // Ctrl+C — exit
     if (data === "\u0003") {
       state.cleanup();
       process.exit(0);
@@ -48,8 +47,6 @@ export const createKeyListener = (onKey: KeyHandler): (() => void) => {
       process.stdin.setRawMode(false);
     }
 
-    // Note: Node.js does not support un-setting encoding back to null (raw Buffer mode).
-    // If stdin had no encoding before, it remains in "utf8" after cleanup.
     if (previousEncoding !== null) {
       process.stdin.setEncoding(previousEncoding);
     }

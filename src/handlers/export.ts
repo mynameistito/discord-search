@@ -43,7 +43,7 @@ export const exportNonInteractive = async (
   guildId: string,
   format: string,
   outputDir?: string
-): Promise<string> => {
+) => {
   if (!isExportFormat(format)) {
     throw new Error(
       `Invalid export format: "${format}". Valid formats: ${[...VALID_EXPORT_FORMATS].join(", ")}`
@@ -92,7 +92,7 @@ export const exportNonInteractive = async (
 export const handleExport = async (
   data: ReturnType<typeof collateResults>,
   guildId: string
-): Promise<void> => {
+) => {
   const format = await select({
     message: "Export format:",
     options: [
@@ -124,7 +124,6 @@ export const handleExport = async (
   const s = spinner();
   s.start("Exporting...");
 
-  // Ensure directory exists
   await mkdir(dir, { recursive: true });
 
   const exports: Promise<Result<void, ExportError>>[] = [];

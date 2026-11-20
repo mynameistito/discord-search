@@ -16,32 +16,32 @@ import type {
 } from "@/errors.ts";
 import { exportNonInteractive, handleExport } from "@/handlers/export.ts";
 
-const handleDiscordApiError = (error: DiscordApiError): void => {
+const handleDiscordApiError = (error: DiscordApiError) => {
   log.error(`API error (${error.status}): ${error.message}`);
 };
 
-const handleIndexNotReadyError = (error: IndexNotReadyError): void => {
+const handleIndexNotReadyError = (error: IndexNotReadyError) => {
   log.error(`Index not ready. Try again in ${error.retryAfter}s.`);
 };
 
-const handleRateLimitError = (error: RateLimitExhaustedError): void => {
+const handleRateLimitError = (error: RateLimitExhaustedError) => {
   log.error(`Rate limited. Try again in ${error.retryAfter}s.`);
 };
 
-const handleValidationError = (error: ValidationError): void => {
+const handleValidationError = (error: ValidationError) => {
   log.error(`Response validation failed: ${error.message}`);
 };
 
-const writeDiscordApiError = (error: DiscordApiError): boolean =>
+const writeDiscordApiError = (error: DiscordApiError) =>
   process.stderr.write(`API error (${error.status}): ${error.message}\n`);
 
-const writeIndexNotReadyError = (error: IndexNotReadyError): boolean =>
+const writeIndexNotReadyError = (error: IndexNotReadyError) =>
   process.stderr.write(`Index not ready. Try again in ${error.retryAfter}s.\n`);
 
-const writeRateLimitError = (error: RateLimitExhaustedError): boolean =>
+const writeRateLimitError = (error: RateLimitExhaustedError) =>
   process.stderr.write(`Rate limited. Try again in ${error.retryAfter}s.\n`);
 
-const writeValidationError = (error: ValidationError): boolean =>
+const writeValidationError = (error: ValidationError) =>
   process.stderr.write(`Response validation failed: ${error.message}\n`);
 
 /**
@@ -49,13 +49,10 @@ const writeValidationError = (error: ValidationError): boolean =>
  *
  * @param data - Collated search results to summarize.
  */
-export const displaySummary = (
-  data: ReturnType<typeof collateResults>
-): void => {
+export const displaySummary = (data: ReturnType<typeof collateResults>) => {
   log.info(`Total messages: ${data.totalMessages}`);
   log.info(`Total embeds: ${data.totalEmbeds}`);
 
-  // Top authors
   const authors = Object.entries(data.byAuthor)
     .toSorted(([, a], [, b]) => b.count - a.count)
     .slice(0, 10);
@@ -71,7 +68,6 @@ export const displaySummary = (
     log.info(`Top authors:\n${authorLines}`);
   }
 
-  // Embed type breakdown
   if (Object.keys(data.embedsByType).length > 0) {
     const typeLines = Object.entries(data.embedsByType)
       .toSorted(([, a], [, b]) => b - a)
@@ -81,7 +77,6 @@ export const displaySummary = (
     log.info(`Embed types:\n${typeLines}`);
   }
 
-  // Top providers
   if (Object.keys(data.embedsByProvider).length > 0) {
     const providerLines = Object.entries(data.embedsByProvider)
       .toSorted(([, a], [, b]) => b - a)
@@ -92,7 +87,6 @@ export const displaySummary = (
     log.info(`Top embed providers:\n${providerLines}`);
   }
 
-  // Top domains
   if (Object.keys(data.embedsByDomain).length > 0) {
     const domainLines = Object.entries(data.embedsByDomain)
       .toSorted(([, a], [, b]) => b - a)
@@ -103,7 +97,6 @@ export const displaySummary = (
     log.info(`Top embed domains:\n${domainLines}`);
   }
 
-  // Extracted field names
   if (data.extractedFields.length > 0) {
     const fieldNames = new Set<string>();
 
@@ -125,7 +118,7 @@ const handlePostSearch = async (
   collated: ReturnType<typeof collateResults>,
   messages: Message[],
   guildId: string
-): Promise<boolean> => {
+) => {
   const action = parseTextPrompt(
     await select({
       message: "What next?",
@@ -164,7 +157,7 @@ const handlePostSearch = async (
 export const executeSearch = async (
   searchParams: SearchParams,
   token: string
-): Promise<void> => {
+) => {
   let liveView = false;
   log.info(
     `${ANSI_DIM}Press [v] during search to toggle live JSON output${ANSI_RESET}`
@@ -243,7 +236,7 @@ export const executeNonInteractiveSearch = async (
     outputDir?: string;
     json: boolean;
   }
-): Promise<void> => {
+) => {
   const result = await searchAllMessages(searchParams, token, (progress) => {
     process.stderr.write(
       `\rFetching messages... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`

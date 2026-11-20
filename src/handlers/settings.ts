@@ -10,7 +10,7 @@ import { generateInviteLink, saveSettings } from "@/config.ts";
 import type { loadConfig, SettingsJson } from "@/config.ts";
 import type { AppState } from "@/types.ts";
 
-const showCurrentSettings = (state: AppState): void => {
+const showCurrentSettings = (state: AppState) => {
   const tokenSummary =
     state.token !== undefined && state.token.length > 0
       ? `***${state.token.slice(-6)}`
@@ -31,9 +31,7 @@ const showCurrentSettings = (state: AppState): void => {
  * @param state - Current CLI settings.
  * @returns Success or the persistence error.
  */
-export const saveStateToSettings = async (
-  state: AppState
-): Promise<Result<void, Error>> => {
+export const saveStateToSettings = async (state: AppState) => {
   const values: SettingsJson = {};
 
   if (state.token !== undefined && state.token.length > 0) {
@@ -61,10 +59,7 @@ export const saveStateToSettings = async (
   return Result.err(result.error);
 };
 
-const handleSettingsAction = async (
-  action: string,
-  state: AppState
-): Promise<void> => {
+const handleSettingsAction = async (action: string, state: AppState) => {
   if (action === "token") {
     const newToken = await password({ message: "Enter new bot token:" });
     state.token = parseTextPrompt(newToken);
@@ -101,7 +96,7 @@ const handleSettingsAction = async (
   }
 };
 
-const runSettingsMenu = async (state: AppState): Promise<boolean> => {
+const runSettingsMenu = async (state: AppState) => {
   showCurrentSettings(state);
 
   const action = parseTextPrompt(
@@ -133,7 +128,7 @@ const runSettingsMenu = async (state: AppState): Promise<boolean> => {
  * @param state - Mutable CLI settings to display and update.
  * @returns When the user exits the settings menu.
  */
-export const handleSettings = async (state: AppState): Promise<void> => {
+export const handleSettings = async (state: AppState) => {
   await runSettingsMenu(state);
 };
 
@@ -147,7 +142,7 @@ export const handleSettings = async (state: AppState): Promise<void> => {
 export const resolveToken = async (
   cliToken: string | undefined,
   configResult: Awaited<ReturnType<typeof loadConfig>>
-): Promise<string> => {
+) => {
   if (cliToken !== undefined && cliToken.length > 0) {
     return cliToken;
   }
@@ -177,8 +172,6 @@ export const resolveToken = async (
   return token;
 };
 
-// --- Non-interactive settings operations ---
-
 /** Resolve a token without prompting.
  *
  * @param cliToken - Optional token supplied on the command line.
@@ -188,7 +181,7 @@ export const resolveToken = async (
 export const resolveTokenNonInteractive = (
   cliToken: string | undefined,
   configResult: Awaited<ReturnType<typeof loadConfig>>
-): Result<string, Error> => {
+) => {
   if (cliToken !== undefined && cliToken.length > 0) {
     return Result.ok(cliToken);
   }
@@ -207,7 +200,7 @@ export const resolveTokenNonInteractive = (
  *
  * @param state - Current CLI settings.
  */
-export const showSettingsNonInteractive = (state: AppState): void => {
+export const showSettingsNonInteractive = (state: AppState) => {
   process.stdout.write(
     JSON.stringify(
       {
@@ -235,7 +228,7 @@ export const setSettingNonInteractive = async (
   key: string,
   value: string,
   state: AppState
-): Promise<void> => {
+) => {
   const normalized = value.trim() || undefined;
 
   if (key === "token") {
@@ -267,9 +260,7 @@ export const setSettingNonInteractive = async (
  *
  * @param clientId - Discord application client ID, if configured.
  */
-export const showInviteLinkNonInteractive = (
-  clientId: string | undefined
-): void => {
+export const showInviteLinkNonInteractive = (clientId: string | undefined) => {
   if (clientId === undefined || clientId.length === 0) {
     process.stderr.write(
       "Error: Client ID required. Use --client-id or set DISCORD_CLIENT_ID.\n"

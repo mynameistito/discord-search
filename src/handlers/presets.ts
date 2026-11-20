@@ -43,10 +43,10 @@ const UNSAFE_PATH_CHAR_CODES = new Set([
   0x22, 0x2a, 0x2e, 0x2f, 0x3a, 0x3c, 0x3e, 0x3f, 0x5c, 0x7c,
 ]);
 
-const isUnsafePathChar = (code: number): boolean =>
+const isUnsafePathChar = (code: number) =>
   code <= 0x1f || UNSAFE_PATH_CHAR_CODES.has(code);
 
-const formatPresetOptionLabel = (preset: Preset): string => {
+const formatPresetOptionLabel = (preset: Preset) => {
   const { content } = preset.params;
 
   const contentSummary =
@@ -57,23 +57,23 @@ const formatPresetOptionLabel = (preset: Preset): string => {
   return `${preset.name} (guild: ${preset.params.guildId}${contentSummary})`;
 };
 
-const logApiError = (error: { status: number; message: string }): void => {
+const logApiError = (error: { status: number; message: string }) => {
   log.error(`API error (${error.status}): ${error.message}`);
 };
 
-const logIndexError = (error: { retryAfter: number }): void => {
+const logIndexError = (error: { retryAfter: number }) => {
   log.error(`Index not ready. Try again in ${error.retryAfter}s.`);
 };
 
-const logRateLimitError = (error: { retryAfter: number }): void => {
+const logRateLimitError = (error: { retryAfter: number }) => {
   log.error(`Rate limited. Try again in ${error.retryAfter}s.`);
 };
 
-const logValidationError = (error: { message: string }): void => {
+const logValidationError = (error: { message: string }) => {
   log.error(`Response validation failed: ${error.message}`);
 };
 
-const sanitizePresetDirName = (name: string): string => {
+const sanitizePresetDirName = (name: string) => {
   let sanitized = "";
 
   for (const character of name) {
@@ -96,7 +96,7 @@ const sanitizePresetDirName = (name: string): string => {
  *
  * @returns When the user returns to the previous menu.
  */
-export const handleManagePresets = async (): Promise<void> => {
+export const handleManagePresets = async () => {
   const presetsResult = await loadPresets();
 
   if (presetsResult.isErr()) {
@@ -148,7 +148,7 @@ export const handleManagePresets = async (): Promise<void> => {
 export const resolveSearchParams = async (
   action: string,
   defaultGuildId?: string
-): Promise<SearchParams | null> => {
+) => {
   if (action === "preset") {
     const presetsResult = await loadPresets();
 
@@ -226,7 +226,7 @@ const runPresetSearch = async (
   token: string,
   format: string,
   timestamp: string
-): Promise<void> => {
+) => {
   const s = spinner();
   s.start(`Searching: ${name}...`);
 
@@ -295,7 +295,7 @@ const runPresetSearch = async (
  * @param token - Discord bot token used for each search.
  * @returns A promise that resolves when preset processing is complete.
  */
-export const handleRunAllPresets = async (token: string): Promise<void> => {
+export const handleRunAllPresets = async (token: string) => {
   const presetsResult = await loadPresets();
 
   if (presetsResult.isErr()) {
@@ -343,7 +343,7 @@ export const handleRunAllPresets = async (token: string): Promise<void> => {
 
   const exportFormat = z.enum(["json", "all", "none"]).parse(format);
 
-  const runPresetAt = async (index: number): Promise<void> => {
+  const runPresetAt = async (index: number) => {
     const preset = presets[index];
 
     if (preset === undefined) {
@@ -367,9 +367,7 @@ export const handleRunAllPresets = async (token: string): Promise<void> => {
   log.success(`Finished running all ${presets.length} preset(s).`);
 };
 
-// --- Non-interactive preset operations ---
-
-const loadPresetsOrExit = async (): Promise<Preset[]> => {
+const loadPresetsOrExit = async () => {
   const result = await loadPresets();
 
   if (result.isErr()) {
@@ -380,7 +378,7 @@ const loadPresetsOrExit = async (): Promise<Preset[]> => {
   return result.value;
 };
 
-const findPresetOrExit = (presets: Preset[], name: string): Preset => {
+const findPresetOrExit = (presets: Preset[], name: string) => {
   const preset = presets.find((p) => p.name === name);
 
   if (!preset) {
@@ -392,7 +390,7 @@ const findPresetOrExit = (presets: Preset[], name: string): Preset => {
 };
 
 /** List saved presets and their primary search filters. */
-export const listPresetsNonInteractive = async (): Promise<void> => {
+export const listPresetsNonInteractive = async () => {
   const presets = await loadPresetsOrExit();
 
   if (presets.length === 0) {
@@ -429,7 +427,7 @@ export const runPresetNonInteractive = async (
   name: string,
   token: string,
   options: { export?: string; outputDir?: string; json: boolean }
-): Promise<void> => {
+) => {
   const presets = await loadPresetsOrExit();
   const preset = findPresetOrExit(presets, name);
   process.stderr.write(`Running preset: ${preset.name}\n`);
@@ -441,7 +439,7 @@ const tryExportPreset = async (
   preset: Preset,
   options: { export: string; outputDir?: string },
   timestamp: string
-): Promise<void> => {
+) => {
   try {
     const safeName = sanitizePresetDirName(preset.name);
 
@@ -464,21 +462,21 @@ const tryExportPreset = async (
   }
 };
 
-const reportApiError = (error: { status: number; message: string }): void => {
+const reportApiError = (error: { status: number; message: string }) => {
   process.stderr.write(`  API error (${error.status}): ${error.message}\n`);
 };
 
-const reportIndexError = (error: { retryAfter: number }): void => {
+const reportIndexError = (error: { retryAfter: number }) => {
   process.stderr.write(
     `  Index not ready. Try again in ${error.retryAfter}s.\n`
   );
 };
 
-const reportRateLimitError = (error: { retryAfter: number }): void => {
+const reportRateLimitError = (error: { retryAfter: number }) => {
   process.stderr.write(`  Rate limited. Try again in ${error.retryAfter}s.\n`);
 };
 
-const reportValidationError = (error: { message: string }): void => {
+const reportValidationError = (error: { message: string }) => {
   process.stderr.write(`  Response validation failed: ${error.message}\n`);
 };
 
@@ -495,7 +493,7 @@ export const runAllPresetsNonInteractive = async (
   all: boolean,
   token: string,
   options: { export?: string; outputDir?: string }
-): Promise<void> => {
+) => {
   const allPresets = await loadPresetsOrExit();
 
   if (allPresets.length === 0) {
@@ -516,7 +514,7 @@ export const runAllPresetsNonInteractive = async (
 
   const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
 
-  const runPresetAt = async (index: number): Promise<void> => {
+  const runPresetAt = async (index: number) => {
     const preset = presets[index];
 
     if (preset === undefined) {
@@ -574,7 +572,7 @@ export const runAllPresetsNonInteractive = async (
 export const savePresetNonInteractive = async (
   name: string,
   params: SearchParams
-): Promise<void> => {
+) => {
   if (params.guildId.length === 0) {
     process.stderr.write("Error: --guild is required when saving a preset.\n");
     process.exit(1);
@@ -595,9 +593,7 @@ export const savePresetNonInteractive = async (
  * @param name - Preset name to delete.
  * @returns A promise that resolves after deletion.
  */
-export const deletePresetNonInteractive = async (
-  name: string
-): Promise<void> => {
+export const deletePresetNonInteractive = async (name: string) => {
   const result = await deletePreset(name);
 
   if (result.isErr()) {

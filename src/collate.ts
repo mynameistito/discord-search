@@ -34,7 +34,7 @@ export interface CollatedData {
   totalMessages: number;
 }
 
-const extractDomain = (url: string): string | null => {
+const extractDomain = (url: string) => {
   try {
     return new URL(url).hostname;
   } catch {
@@ -42,11 +42,11 @@ const extractDomain = (url: string): string | null => {
   }
 };
 
-const increment = (record: Record<string, number>, key: string): void => {
+const increment = (record: Record<string, number>, key: string) => {
   record[key] = (record[key] ?? 0) + 1;
 };
 
-const processEmbed = (embed: Embed, data: CollatedData): void => {
+const processEmbed = (embed: Embed, data: CollatedData) => {
   if (embed.type !== undefined && embed.type.length > 0) {
     increment(data.embedsByType, embed.type);
   }
@@ -68,11 +68,7 @@ const processEmbed = (embed: Embed, data: CollatedData): void => {
   }
 };
 
-const extractFields = (
-  embed: Embed,
-  msg: Message,
-  data: CollatedData
-): void => {
+const extractFields = (embed: Embed, msg: Message, data: CollatedData) => {
   if (!embed.fields || embed.fields.length === 0) {
     return;
   }
@@ -84,16 +80,16 @@ const extractFields = (
   }
 
   data.extractedFields.push({
+    fields,
     channelId: msg.channel_id,
     embedDescription: embed.description ?? null,
     embedTitle: embed.title ?? null,
-    fields,
     messageId: msg.id,
     messageTimestamp: msg.timestamp,
   });
 };
 
-const processMessage = (msg: Message, data: CollatedData): void => {
+const processMessage = (msg: Message, data: CollatedData) => {
   increment(data.byChannel, msg.channel_id);
 
   const authorEntry = data.byAuthor[msg.author.id];
@@ -113,8 +109,8 @@ const processMessage = (msg: Message, data: CollatedData): void => {
 
   for (const embed of embeds) {
     data.embeds.push({
-      channelId: msg.channel_id,
       embed,
+      channelId: msg.channel_id,
       messageAuthor: {
         bot: msg.author.bot,
         id: msg.author.id,
@@ -135,8 +131,9 @@ const processMessage = (msg: Message, data: CollatedData): void => {
  * @param messages - Messages returned by Discord search.
  * @returns Collated counts and rows for the supplied messages.
  */
-export const collateResults = (messages: Message[]): CollatedData => {
+export const collateResults = (messages: Message[]) => {
   const data: CollatedData = {
+    messages,
     byAuthor: {},
     byChannel: {},
     embeds: [],
@@ -145,7 +142,6 @@ export const collateResults = (messages: Message[]): CollatedData => {
     embedsByProvider: {},
     embedsByType: {},
     extractedFields: [],
-    messages,
     totalEmbeds: 0,
     totalMessages: messages.length,
   };

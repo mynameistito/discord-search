@@ -7,21 +7,10 @@ import {
   SearchParamsSchema,
   SearchResponseSchema,
 } from "@/discord/schemas.ts";
-import type {
-  Message,
-  SearchParams,
-  SearchResponse,
-} from "@/discord/schemas.ts";
-import type {
-  DiscordApiError,
-  IndexNotReadyError,
-  RateLimitExhaustedError,
-} from "@/errors.ts";
+import type { Message, SearchParams } from "@/discord/schemas.ts";
 import { ValidationError } from "@/errors.ts";
 
-const validateSearchParams = (
-  params: SearchParams
-): Result<SearchParams, ValidationError> => {
+const validateSearchParams = (params: SearchParams) => {
   const parsed = SearchParamsSchema.safeParse(params);
 
   if (!parsed.success) {
@@ -36,17 +25,11 @@ const validateSearchParams = (
   return Result.ok(parsed.data);
 };
 
-type SearchError =
-  | DiscordApiError
-  | RateLimitExhaustedError
-  | IndexNotReadyError
-  | ValidationError;
-
 const buildQueryString = (
   params: SearchParams,
   offset: number,
   maxId?: string
-): string => {
+) => {
   const qs = new URLSearchParams();
 
   const pageSize =
@@ -85,7 +68,6 @@ const buildQueryString = (
     qs.set("slop", String(params.slop));
   }
 
-  // Use override maxId for snowflake partitioning, otherwise use params
   const effectiveMaxId = maxId ?? params.maxId;
 
   if (effectiveMaxId !== undefined && effectiveMaxId.length > 0) {
@@ -96,7 +78,6 @@ const buildQueryString = (
     qs.set("min_id", params.minId);
   }
 
-  // Array params
   const arrayParams: [string, string[] | undefined][] = [
     ["channel_id", params.channelId],
     ["author_id", params.authorId],
@@ -129,7 +110,7 @@ const fetchSearch = async (
   token: string,
   offset: number,
   maxId?: string
-): Promise<Result<SearchResponse, SearchError>> => {
+) => {
   const queryString = buildQueryString(params, offset, maxId);
   const encodedGuildId = encodeURIComponent(params.guildId);
   const path = `/guilds/${encodedGuildId}/messages/search?${queryString}`;
@@ -150,7 +131,7 @@ export const searchMessages = async (
   token: string,
   offset = 0,
   maxId?: string
-): Promise<Result<SearchResponse, SearchError>> => {
+) => {
   const validatedParams = validateSearchParams(params);
 
   if (validatedParams.isErr()) {
@@ -186,7 +167,7 @@ const fetchPage = async (
   maxMessages: number | undefined,
   onProgress?: ProgressCallback,
   onPage?: PageCallback
-): Promise<Result<"done" | "continue" | "break", SearchError>> => {
+) => {
   const result = await fetchSearch(params, token, offset, maxId);
 
   if (result.isErr()) {
@@ -200,9 +181,6 @@ const fetchPage = async (
       ? MAX_PAGE_SIZE
       : Math.min(params.limit, MAX_PAGE_SIZE);
 
-  // Only capture totalResults from the first (unfiltered) response.
-  // Subsequent partitions with max_id return a smaller total_results
-  // scoped to the filtered range, which would cause early termination.
   if (state.totalResults === 0) {
     state.totalResults =
       maxMessages === undefined
@@ -223,7 +201,6 @@ const fetchPage = async (
     return new Ok("done" as const);
   }
 
-  // Truncate if adding this page would exceed the limit
   if (
     maxMessages !== undefined &&
     state.allMessages.length + pageMessages.length > maxMessages
@@ -270,7 +247,7 @@ const fetchPartitionPage = async (
   state: PaginationState,
   maxId: string | undefined,
   offset: number
-): Promise<Result<"done" | "continue", SearchError>> => {
+) => {
   if (offset > MAX_OFFSET) {
     return new Ok("continue" as const);
   }
@@ -321,7 +298,7 @@ export const searchAllMessages = async (
   onProgress?: ProgressCallback,
   onPage?: PageCallback,
   maxMessages?: number
-): Promise<Result<Message[], SearchError>> => {
+) => {
   const validatedParams = validateSearchParams(params);
 
   if (validatedParams.isErr()) {
@@ -354,20 +331,18 @@ export const searchAllMessages = async (
     maxMessages,
     onPage,
     onProgress,
+    token,
     pageSize:
       queryParams.limit === undefined
         ? MAX_PAGE_SIZE
         : Math.min(queryParams.limit, MAX_PAGE_SIZE),
     searchParams: { ...queryParams, sortBy: "timestamp", sortOrder: "desc" },
     startOffset: queryParams.offset ?? 0,
-    token,
   };
 
   const state: PaginationState = { allMessages: [], totalResults: 0 };
 
-  const fetchPartitions = async (
-    currentMaxId: string | null
-  ): Promise<Result<boolean, SearchError>> => {
+  const fetchPartitions = async (currentMaxId: string | null) => {
     const initialOffset = currentMaxId === null ? config.startOffset : 0;
 
     const result = await fetchPartitionPage(

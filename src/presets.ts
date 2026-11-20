@@ -17,11 +17,7 @@ const PresetsArraySchema = z.array(PresetSchema);
 /** A named set of validated Discord search parameters. */
 export type Preset = z.infer<typeof PresetSchema>;
 
-const consumeStringChars = (
-  text: string,
-  start: number,
-  out: string[]
-): number => {
+const consumeStringChars = (text: string, start: number, out: string[]) => {
   let i = start;
 
   while (i < text.length) {
@@ -43,7 +39,7 @@ const consumeStringChars = (
   return i;
 };
 
-const skipComment = (text: string, start: number): number => {
+const skipComment = (text: string, start: number) => {
   if (text.charAt(start + 1) === "/") {
     let i = start;
 
@@ -66,7 +62,7 @@ const skipComment = (text: string, start: number): number => {
   return i + 2;
 };
 
-const parseJsonc = (text: string): Preset[] => {
+const parseJsonc = (text: string) => {
   const out: string[] = [];
   let i = 0;
 
@@ -95,7 +91,7 @@ const parseJsonc = (text: string): Preset[] => {
  *
  * @returns The loaded presets or a persistence error.
  */
-export const loadPresets = async (): Promise<Result<Preset[], PresetError>> =>
+export const loadPresets = async () =>
   await Result.tryPromise({
     catch: (cause) =>
       new PresetError({
@@ -140,7 +136,7 @@ export const loadPresets = async (): Promise<Result<Preset[], PresetError>> =>
 export const savePreset = async (
   name: string,
   params: z.infer<typeof SearchParamsSchema>
-): Promise<Result<void, PresetError>> =>
+) =>
   await Result.tryPromise({
     catch: (cause) =>
       new PresetError({
@@ -175,9 +171,7 @@ export const savePreset = async (
  * @param name - Name of the preset to delete.
  * @returns Success or a preset persistence error.
  */
-export const deletePreset = async (
-  name: string
-): Promise<Result<void, PresetError>> =>
+export const deletePreset = async (name: string) =>
   await Result.tryPromise({
     catch: (cause) =>
       new PresetError({

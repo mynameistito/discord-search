@@ -6,15 +6,13 @@ export const INTEGER_REGEX = /^\d+$/u;
  * @param input - The comma-separated input.
  * @returns The trimmed values, or `undefined` for empty input.
  */
-export const parseCommaSeparated = (input: string): string[] | undefined => {
+export const parseCommaSeparated = (input: string) => {
   const trimmed = input.trim();
 
-  if (!trimmed) {
-    return undefined;
-  }
-
   return trimmed
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+    ? trimmed
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    : undefined;
 };

@@ -59,10 +59,7 @@ const MenuActionSchema = z.enum([
 
 const PackageVersionSchema = z.object({ version: z.string() });
 
-const handleMenuAction = async (
-  action: string,
-  state: AppState
-): Promise<boolean> => {
+const handleMenuAction = async (action: string, state: AppState) => {
   if (action === "exit") {
     return false;
   }
@@ -106,7 +103,7 @@ const handleMenuAction = async (
   return true;
 };
 
-const runInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
+const runInteractive = async (cliArgs: ParsedArgs) => {
   if (cliArgs.command !== "interactive") {
     return;
   }
@@ -127,7 +124,7 @@ const runInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
     token,
   };
 
-  const runMenu = async (): Promise<void> => {
+  const runMenu = async () => {
     const action = await select({
       message: "What would you like to do?",
       options: [
@@ -160,7 +157,7 @@ const runInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
 const handleSearchCommand = async (
   cliArgs: SearchArgs,
   configResult: ConfigResult
-): Promise<void> => {
+) => {
   if (cliArgs.params.guildId.length === 0) {
     exitWithError("--guild is required for search.", "search");
 
@@ -200,7 +197,7 @@ const handleSearchCommand = async (
 const handlePresetRunCommand = async (
   cliArgs: PresetRunArgs,
   configResult: ConfigResult
-): Promise<void> => {
+) => {
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
 
   if (tokenResult.isErr()) {
@@ -219,7 +216,7 @@ const handlePresetRunCommand = async (
 const handlePresetRunAllCommand = async (
   cliArgs: PresetRunAllArgs,
   configResult: ConfigResult
-): Promise<void> => {
+) => {
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
 
   if (tokenResult.isErr()) {
@@ -239,22 +236,18 @@ const handlePresetRunAllCommand = async (
   );
 };
 
-const handlePresetSaveCommand = async (
-  cliArgs: PresetSaveArgs
-): Promise<void> => {
+const handlePresetSaveCommand = async (cliArgs: PresetSaveArgs) => {
   await savePresetNonInteractive(cliArgs.name, cliArgs.params);
 };
 
-const handlePresetDeleteCommand = async (
-  cliArgs: PresetDeleteArgs
-): Promise<void> => {
+const handlePresetDeleteCommand = async (cliArgs: PresetDeleteArgs) => {
   await deletePresetNonInteractive(cliArgs.name);
 };
 
 const buildStateFromConfig = (
   configResult: ConfigResult,
   cliToken?: string
-): AppState => ({
+) => ({
   clientId: configResult.isOk() ? configResult.value.clientId : undefined,
   defaultGuildId: configResult.isOk()
     ? configResult.value.defaultGuildId
@@ -265,14 +258,14 @@ const buildStateFromConfig = (
 const handleSettingsShowCommand = (
   cliArgs: SettingsShowArgs,
   configResult: ConfigResult
-): void => {
+) => {
   showSettingsNonInteractive(buildStateFromConfig(configResult, cliArgs.token));
 };
 
 const handleSettingsSetCommand = async (
   cliArgs: SettingsSetArgs,
   configResult: ConfigResult
-): Promise<void> => {
+) => {
   const state = buildStateFromConfig(configResult, cliArgs.token);
   await setSettingNonInteractive(cliArgs.key, cliArgs.value, state);
 };
@@ -280,7 +273,7 @@ const handleSettingsSetCommand = async (
 const handleSettingsInviteCommand = (
   cliArgs: SettingsInviteArgs,
   configResult: ConfigResult
-): void => {
+) => {
   const clientId =
     cliArgs.clientId ??
     (configResult.isOk() ? configResult.value.clientId : undefined);
@@ -291,7 +284,7 @@ const handleSettingsInviteCommand = (
 const handlePresetCommand = async (
   cliArgs: ParsedArgs,
   configResult: ConfigResult
-): Promise<void> => {
+) => {
   if (cliArgs.command !== "preset") {
     return;
   }
@@ -312,7 +305,7 @@ const handlePresetCommand = async (
 const handleSettingsCommand = async (
   cliArgs: ParsedArgs,
   configResult: ConfigResult
-): Promise<void> => {
+) => {
   if (cliArgs.command !== "settings") {
     return;
   }
@@ -326,7 +319,7 @@ const handleSettingsCommand = async (
   }
 };
 
-const runNonInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
+const runNonInteractive = async (cliArgs: ParsedArgs) => {
   await ensureAppDir();
   const configResult = await loadConfigFn();
 
@@ -339,7 +332,7 @@ const runNonInteractive = async (cliArgs: ParsedArgs): Promise<void> => {
   }
 };
 
-const main = async (): Promise<void> => {
+const main = async () => {
   const cliArgs = parseArgs(process.argv.slice(2));
 
   if (cliArgs.help) {
@@ -374,7 +367,7 @@ const main = async (): Promise<void> => {
     : runNonInteractive(cliArgs));
 };
 
-const run = async (): Promise<void> => {
+const run = async () => {
   try {
     await main();
   } catch (error: unknown) {

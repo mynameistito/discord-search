@@ -1,11 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Cleanup script to remove temporary files
- * Cross-platform replacement for Unix find command
- */
-
-import type { Dirent } from "node:fs";
 import { readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 
@@ -26,15 +20,15 @@ const SKIP_DIRS = new Set([
   "build-output",
 ]);
 
-const shouldDeleteFile = (filename: string): boolean =>
+const shouldDeleteFile = (filename: string) =>
   TARGET_PATTERNS.some((pattern) => pattern.test(filename));
 
-const shouldSkipDir = (dirname: string): boolean => SKIP_DIRS.has(dirname);
+const shouldSkipDir = (dirname: string) => SKIP_DIRS.has(dirname);
 
 const isFileNotFoundError = (error: unknown): error is NodeJS.ErrnoException =>
   error instanceof Error && "code" in error && error.code === "ENOENT";
 
-const readDirectorySafely = async (dir: string): Promise<Dirent[] | null> => {
+const readDirectorySafely = async (dir: string) => {
   try {
     return await readdir(dir, { withFileTypes: true });
   } catch (error) {
@@ -46,7 +40,7 @@ const readDirectorySafely = async (dir: string): Promise<Dirent[] | null> => {
   }
 };
 
-const deleteFileSafely = async (fullPath: string): Promise<void> => {
+const deleteFileSafely = async (fullPath: string) => {
   try {
     await unlink(fullPath);
   } catch (error) {
@@ -56,7 +50,7 @@ const deleteFileSafely = async (fullPath: string): Promise<void> => {
   }
 };
 
-const cleanup = async (dir: string): Promise<void> => {
+const cleanup = async (dir: string) => {
   const entries = await readDirectorySafely(dir);
 
   if (entries === null) {

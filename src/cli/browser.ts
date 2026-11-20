@@ -9,7 +9,7 @@ import {
 import { createKeyListener } from "@/cli/keys.ts";
 import type { Message } from "@/discord/schemas.ts";
 
-const formatTimestamp = (timestamp: string): string => {
+const formatTimestamp = (timestamp: string) => {
   const date = new Date(timestamp);
 
   return date.toLocaleString([], {
@@ -22,7 +22,7 @@ const formatTimestamp = (timestamp: string): string => {
   });
 };
 
-const formatMessagePreview = (msg: Message): string => {
+const formatMessagePreview = (msg: Message) => {
   const author =
     msg.author.bot === true
       ? `${msg.author.username} [BOT]`
@@ -50,16 +50,16 @@ const formatMessagePreview = (msg: Message): string => {
   return `${ANSI_DIM}${formatTimestamp(msg.timestamp)}${ANSI_RESET} ${ANSI_CYAN}${author}${ANSI_RESET}: ${content}${suffix}`;
 };
 
-const truncate = (text: string, maxLen: number): string =>
+const truncate = (text: string, maxLen: number) =>
   text.length > maxLen ? `${text.slice(0, maxLen)}...` : text;
 
-const renderField = (field: { name: string; value: string }): void => {
+const renderField = (field: { name: string; value: string }) => {
   const name = truncate(field.name, 40);
   const value = truncate(field.value, 100);
   process.stdout.write(`  ${ANSI_CYAN}${name}:${ANSI_RESET} ${value}\n`);
 };
 
-const renderEmbedPreview = (msg: Message): void => {
+const renderEmbedPreview = (msg: Message) => {
   if (!msg.embeds || msg.embeds.length === 0) {
     return;
   }
@@ -90,7 +90,7 @@ const renderMessageView = (
   index: number,
   total: number,
   viewMode: "preview" | "json"
-): void => {
+) => {
   process.stdout.write(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
   process.stdout.write(
     `${ANSI_YELLOW}Message ${index + 1} of ${total}${ANSI_RESET}\n\n`
@@ -108,11 +108,11 @@ const renderMessageView = (
   );
 };
 
-const write = (text: string): void => {
+const write = (text: string) => {
   process.stdout.write(text);
 };
 
-const pauseInput = (): void => {
+const pauseInput = () => {
   process.stdin.pause();
 };
 
@@ -120,11 +120,13 @@ const handleRenderError = (
   error: Error,
   reject: (reason: Error) => void,
   cleanup: () => void
-): void => {
+) => {
   try {
     cleanup();
   } catch {
-    // Swallow cleanup errors to preserve original error
+    reject(error);
+
+    return;
   }
 
   reject(error);
@@ -134,7 +136,7 @@ const handleQuit = (
   cleanup: () => void,
   resolve: () => void,
   reject: (reason: Error) => void
-): void => {
+) => {
   try {
     cleanup();
     write(ANSI_CLEAR_SCREEN + ANSI_CURSOR_HOME);
@@ -148,7 +150,7 @@ const navigate = (
   key: string,
   state: { index: number; viewMode: "preview" | "json" },
   total: number
-): void => {
+) => {
   if (key === "j" || key === "\u001B[B") {
     state.index = Math.min(state.index + 1, total - 1);
   } else if (key === "k" || key === "\u001B[A") {
@@ -163,7 +165,7 @@ const navigate = (
  * @param messages - The messages to browse.
  * @returns A promise that resolves when the viewer closes.
  */
-export const browseMessages = async (messages: Message[]): Promise<void> => {
+export const browseMessages = async (messages: Message[]) => {
   if (!process.stdin.isTTY) {
     write("Interactive browsing requires a TTY terminal.\n");
 
@@ -182,7 +184,7 @@ export const browseMessages = async (messages: Message[]): Promise<void> => {
 
   let cleanup = pauseInput;
 
-  const render = (): boolean => {
+  const render = () => {
     const msg = messages[state.index];
 
     if (!msg) {

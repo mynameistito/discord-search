@@ -26,16 +26,10 @@ interface RateLimitState {
   resetAfterMs: number;
 }
 
-/**
- * Module-level rate limit state shared across all calls to discordFetch.
- * Keyed per bucket (endpoint path + token hash), so different endpoints
- * maintain independent rate limit tracking. Assumes sequential usage
- * per bucket — concurrent requests to the same bucket may race.
- */
 const rateLimitBuckets = new Map<string, RateLimitState>();
 const bucketKeyMap = new Map<string, string>();
 
-const computeBucketKey = (path: string, token: string): string => {
+const computeBucketKey = (path: string, token: string) => {
   const [routePath] = path.split("?");
   const hashInput = `${routePath}:${token}`;
   let hash = 0;
@@ -48,7 +42,7 @@ const computeBucketKey = (path: string, token: string): string => {
   return `bucket:${hash}`;
 };
 
-const getBucketState = (bucketKey: string): RateLimitState => {
+const getBucketState = (bucketKey: string) => {
   let state = rateLimitBuckets.get(bucketKey);
 
   if (!state) {
@@ -67,7 +61,7 @@ const updateRateLimitState = (
   headers: Headers,
   bucketKey: string,
   computedKey: string
-): string => {
+) => {
   const state = getBucketState(bucketKey);
   const remaining = headers.get("X-RateLimit-Remaining");
   const resetAfter = headers.get("X-RateLimit-Reset-After");
@@ -96,7 +90,7 @@ const updateRateLimitState = (
   return activeBucketKey;
 };
 
-const waitForRateLimit = async (bucketKey: string): Promise<void> => {
+const waitForRateLimit = async (bucketKey: string) => {
   const state = getBucketState(bucketKey);
 
   if (state.remaining > 0) {
@@ -123,7 +117,7 @@ const fetchWithAuth = async (
   token: string,
   timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   method = "GET"
-): Promise<Result<Response, DiscordApiError>> => {
+) => {
   const controller = new AbortController();
 
   const timer = setTimeout(() => {
@@ -148,8 +142,8 @@ const fetchWithAuth = async (
     },
     try: async () =>
       await fetch(url, {
-        headers: makeHeaders(token),
         method,
+        headers: makeHeaders(token),
         signal: controller.signal,
       }),
   });
@@ -159,17 +153,11 @@ const fetchWithAuth = async (
   return result;
 };
 
-type DiscordFetchError =
-  | DiscordApiError
-  | RateLimitExhaustedError
-  | IndexNotReadyError
-  | ValidationError;
-
 const handle429 = async (
   response: Response,
   rateLimitAttempt: number,
   max429Retries: number
-): Promise<Result<"retry", DiscordApiError | RateLimitExhaustedError>> => {
+) => {
   const bodyResult = await Result.tryPromise({
     catch: () =>
       new DiscordApiError({
@@ -215,7 +203,7 @@ const handle429 = async (
   return Result.ok("retry" as const);
 };
 
-const parseRetryAfterFrom202 = async (response: Response): Promise<number> => {
+const parseRetryAfterFrom202 = async (response: Response) => {
   const bodyResult = await Result.tryPromise({
     catch: () => null,
     try: async () => await response.json(),
@@ -236,9 +224,7 @@ interface RetryCounter {
   value: number;
 }
 
-const handleErrorResponse = async (
-  response: Response
-): Promise<Result<never, DiscordApiError>> => {
+const handleErrorResponse = async (response: Response) => {
   const bodyResult = await Result.tryPromise({
     catch: () => null,
     try: async () => await response.json(),
@@ -253,10 +239,7 @@ const handleErrorResponse = async (
   );
 };
 
-const parseResponse = async <T>(
-  response: Response,
-  schema: z.ZodType<T>
-): Promise<Result<T, DiscordApiError | ValidationError>> => {
+const parseResponse = async <T>(response: Response, schema: z.ZodType<T>) => {
   const jsonResult = await Result.tryPromise({
     catch: (cause) =>
       new DiscordApiError({
@@ -296,7 +279,7 @@ const handle202Attempt = async <T>(
   initialBucketKey: string,
   computedKey: string,
   rateLimitCounter: RetryCounter
-): Promise<Result<T, DiscordFetchError>> => {
+) => {
   if (attempt >= maxRetries) {
     return Result.err(
       new IndexNotReadyError({
@@ -384,7 +367,7 @@ const handle202 = async <T>(
   initialBucketKey: string,
   computedKey: string,
   rateLimitCounter: RetryCounter
-): Promise<Result<T, DiscordFetchError>> =>
+) =>
   await handle202Attempt(
     url,
     token,
@@ -407,7 +390,7 @@ const fetchWithRetries = async <T>(
   bucketKey: string,
   computedKey: string,
   rateLimitCounter: RetryCounter
-): Promise<Result<T, DiscordFetchError>> => {
+) => {
   await waitForRateLimit(bucketKey);
 
   const fetchResult = await fetchWithAuth(url, token);
@@ -485,7 +468,7 @@ export const discordFetch = async <T>(
   token: string,
   maxRetries429 = DEFAULT_MAX_RETRIES_429,
   maxRetries202 = DEFAULT_MAX_RETRIES_202
-): Promise<Result<T, DiscordFetchError>> => {
+) => {
   const url = `${DISCORD_API_BASE}${path}`;
   const computedKey = computeBucketKey(path, token);
   const bucketKey = bucketKeyMap.get(computedKey) ?? computedKey;

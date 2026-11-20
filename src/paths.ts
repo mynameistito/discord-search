@@ -18,7 +18,7 @@ export const OUTPUT_DIR = path.join(APP_DIR, "output");
  *
  * @returns The path to the existing JSONC or default preset file.
  */
-export const getPresetsFile = async (): Promise<string> => {
+export const getPresetsFile = async () => {
   try {
     await access(PRESETS_FILE_JSONC, constants.F_OK);
 
@@ -32,24 +32,24 @@ export const getPresetsFile = async (): Promise<string> => {
   }
 };
 
-const chmodSafe = async (filePath: string, mode: number): Promise<void> => {
+const chmodSafe = async (filePath: string, mode: number) => {
   try {
     await chmod(filePath, mode);
   } catch (error) {
     if (
-      error instanceof Error &&
-      "code" in error &&
-      (error.code === "ENOTSUP" || error.code === "EINVAL")
+      !(
+        error instanceof Error &&
+        "code" in error &&
+        (error.code === "ENOTSUP" || error.code === "EINVAL")
+      )
     ) {
-      // Ignore known unsupported cases (e.g., Windows)
-    } else {
       throw error;
     }
   }
 };
 
 /** Create the application directories and secure the settings directory. */
-export const ensureAppDir = async (): Promise<void> => {
+export const ensureAppDir = async () => {
   await mkdir(APP_DIR, { mode: 0o700, recursive: true });
   await chmodSafe(APP_DIR, 0o700);
 

@@ -15,10 +15,7 @@ import { INTEGER_REGEX, parseCommaSeparated } from "@/cli/utils.ts";
 import { SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
-const parseWithError = <T extends ParsedArgs>(
-  data: T,
-  subcommand: string
-): T => {
+const parseWithError = <T extends ParsedArgs>(data: T, subcommand: string) => {
   const result = ParsedArgsSchema.safeParse(data);
 
   if (!result.success) {
@@ -29,13 +26,7 @@ const parseWithError = <T extends ParsedArgs>(
   return data;
 };
 
-// --- Arg parsing helpers ---
-
-const consumeFlag = (
-  args: string[],
-  i: number,
-  flagName: string
-): ConsumedFlag => {
+const consumeFlag = (args: string[], i: number, flagName: string) => {
   const next = args[i + 1];
 
   if (next !== undefined && next.length > 0 && !next.startsWith("-")) {
@@ -45,12 +36,7 @@ const consumeFlag = (
   return exitWithError(`Flag ${flagName} requires a value`);
 };
 
-interface ConsumedFlag {
-  value: string;
-  skip: number;
-}
-
-const parseGlobalFlags = (args: string[]): ParsedGlobalFlags => {
+const parseGlobalFlags = (args: string[]) => {
   const global: GlobalFlags & { guild?: string; clientId?: string } = {
     help: false,
     version: false,
@@ -85,14 +71,8 @@ const parseGlobalFlags = (args: string[]): ParsedGlobalFlags => {
   return { global, remaining };
 };
 
-interface ParsedGlobalFlags {
-  global: GlobalFlags & { guild?: string; clientId?: string };
-  remaining: string[];
-}
-
 type FlagKeyMap = Readonly<Record<string, keyof SearchParams | undefined>>;
 
-// Maps flag names to SearchParams keys for comma-separated array fields
 const COMMA_SEP_FLAGS = {
   "--attachment-extension": "attachmentExtension",
   "--attachment-filename": "attachmentFilename",
@@ -109,7 +89,6 @@ const COMMA_SEP_FLAGS = {
   "--replied-to-user": "repliedToUserId",
 } satisfies FlagKeyMap;
 
-// Maps flag names to SearchParams keys for simple string fields
 const STRING_FLAGS = {
   "--content": "content",
   "--max-id": "maxId",
@@ -118,51 +97,27 @@ const STRING_FLAGS = {
   "--sort-order": "sortOrder",
 } satisfies FlagKeyMap;
 
-// Maps flag names to SearchParams keys for boolean fields
 const BOOLEAN_FLAGS = {
   "--include-nsfw": "includeNsfw",
   "--mention-everyone": "mentionEveryone",
   "--pinned": "pinned",
 } satisfies FlagKeyMap;
 
-const getFlagKey = (
-  flags: FlagKeyMap,
-  arg: string
-): keyof SearchParams | undefined =>
+const getFlagKey = (flags: FlagKeyMap, arg: string) =>
   Object.entries(flags).find(([flag]) => flag === arg)?.[1];
-
-interface SearchFlagsResult {
-  params: SearchParamsInput;
-  export?: ExportFormat;
-  outputDir?: string;
-  json: boolean;
-  savePreset?: string;
-}
 
 type SearchParamsInput = Partial<SearchParams> & { guildId?: string };
 
 type ParseContext = "search" | "preset";
 
-/** Check whether an argument can be used as a flag value.
- *
- * @param s - The candidate argument.
- * @returns Whether the argument is a non-empty value rather than another flag.
- */
 const isValue = (s: string | undefined): s is string =>
   s !== undefined && !s.startsWith("-");
 
-/** Validate and return an integer value for a flag, or exit with error.
- *
- * @param flag - The option name being parsed.
- * @param next - The following CLI argument.
- * @param context - The command used to format parsing errors.
- * @returns The parsed integer.
- */
 const requireInt = (
   flag: string,
   next: string | undefined,
   context: ParseContext
-): number => {
+) => {
   if (!isValue(next)) {
     return exitWithError(`Flag ${flag} requires a value`, context);
   }
@@ -177,13 +132,12 @@ const requireInt = (
   return Math.trunc(Number(next));
 };
 
-// Returns number of args consumed: 0 = no match, 1 = flag only, 2 = flag + value
 const applySearchParamFlag = (
   arg: string,
   next: string | undefined,
   params: SearchParamsInput,
   context: ParseContext
-): number => {
+) => {
   const commaSepKey = getFlagKey(COMMA_SEP_FLAGS, arg);
 
   if (commaSepKey !== undefined) {
@@ -250,7 +204,7 @@ type ExportFormat = (typeof VALID_EXPORT_FORMATS)[number];
 const VALID_EXPORT_FORMAT_SET = new Set<string>(VALID_EXPORT_FORMATS);
 const PRESET_RUN_ALL_COMMAND = "preset run-all";
 
-const checkNoLeftovers = (args: string[], command: string): void => {
+const checkNoLeftovers = (args: string[], command: string) => {
   for (const arg of args) {
     if (arg.startsWith("-")) {
       exitWithError(`Unknown flag: "${arg}"`, command);
@@ -260,12 +214,7 @@ const checkNoLeftovers = (args: string[], command: string): void => {
   }
 };
 
-// Parses common output flags (--export, --output-dir, --json) from args
-// Returns flags and leftover args that weren't recognized
-const parseOutputFlags = (
-  args: string[],
-  subcommand: "search" | "preset"
-): ParseOutputFlagsResult => {
+const parseOutputFlags = (args: string[], subcommand: "search" | "preset") => {
   let exportFormat: ExportFormat | undefined;
   let outputDir: string | undefined;
   let json = false;
@@ -306,18 +255,11 @@ const parseOutputFlags = (
   return { export: exportFormat, json, leftovers, outputDir };
 };
 
-interface ParseOutputFlagsResult {
-  export?: ExportFormat;
-  outputDir?: string;
-  json: boolean;
-  leftovers: string[];
-}
-
 const parseSearchFlags = (
   args: string[],
   guildId?: string,
   context: ParseContext = "search"
-): SearchFlagsResult => {
+) => {
   const params: SearchParamsInput = {};
   const output = parseOutputFlags(args, context);
   let savePreset: string | undefined;
@@ -360,12 +302,10 @@ const parseSearchFlags = (
   };
 };
 
-// --- Per-subcommand parsers ---
-
 const parseSearchCommand = (
   remaining: string[],
   global: GlobalFlags & { guild?: string }
-): SearchArgs | HelpArgs => {
+) => {
   const guildId = global.guild;
 
   if (global.help) {
@@ -419,10 +359,7 @@ const parseSearchCommand = (
   );
 };
 
-const parsePresetRunAction = (
-  remaining: string[],
-  global: GlobalFlags
-): PresetRunArgs => {
+const parsePresetRunAction = (remaining: string[], global: GlobalFlags) => {
   const name = remaining.slice(2).at(0);
 
   if (name === undefined || name.length === 0 || name.startsWith("-")) {
@@ -434,12 +371,12 @@ const parsePresetRunAction = (
 
   return parseWithError<PresetRunArgs>(
     {
+      name,
       action: "run",
       command: "preset",
       export: flags.export,
       help: global.help,
       json: flags.json,
-      name,
       outputDir: flags.outputDir,
       token: global.token,
       version: global.version,
@@ -448,10 +385,7 @@ const parsePresetRunAction = (
   );
 };
 
-const parsePresetRunAllAction = (
-  remaining: string[],
-  global: GlobalFlags
-): PresetRunAllArgs => {
+const parsePresetRunAllAction = (remaining: string[], global: GlobalFlags) => {
   const restArgs = remaining.slice(2);
   const flags = parseOutputFlags(restArgs, "preset");
 
@@ -488,12 +422,12 @@ const parsePresetRunAllAction = (
 
   return parseWithError<PresetRunAllArgs>(
     {
-      action: "run-all",
       all,
+      names,
+      action: "run-all",
       command: "preset",
       export: flags.export,
       help: global.help,
-      names,
       outputDir: flags.outputDir,
       token: global.token,
       version: global.version,
@@ -512,7 +446,7 @@ const DISALLOWED_PRESET_SAVE_FLAGS = new Set([
 const parsePresetSaveAction = (
   remaining: string[],
   global: GlobalFlags & { guild?: string }
-): PresetSaveArgs => {
+) => {
   const name = remaining.slice(2).at(0);
 
   if (name === undefined || name.length === 0 || name.startsWith("-")) {
@@ -541,10 +475,10 @@ const parsePresetSaveAction = (
 
   return parseWithError<PresetSaveArgs>(
     {
+      name,
       action: "save",
       command: "preset",
       help: global.help,
-      name,
       params: { ...parsed.params, guildId: global.guild },
       token: global.token,
       version: global.version,
@@ -556,7 +490,7 @@ const parsePresetSaveAction = (
 const parsePresetCommand = (
   remaining: string[],
   global: GlobalFlags & { guild?: string; clientId?: string }
-): ParsedArgs => {
+) => {
   if (global.help) {
     return parseWithError<HelpArgs>(
       {
@@ -626,10 +560,10 @@ const parsePresetCommand = (
 
     return parseWithError<ParsedArgs>(
       {
+        name,
         action: "delete",
         command: "preset",
         help: global.help,
-        name,
         token: global.token,
         version: global.version,
       },
@@ -646,7 +580,7 @@ const parsePresetCommand = (
 const parseSettingsCommand = (
   remaining: string[],
   global: GlobalFlags & { clientId?: string }
-): ParsedArgs => {
+) => {
   if (global.help) {
     return parseWithError<HelpArgs>(
       {
@@ -731,12 +665,12 @@ const parseSettingsCommand = (
 
     return parseWithError<ParsedArgs>(
       {
+        value,
         action: "set",
         command: "settings",
         help: global.help,
         key: settingKey,
         token: global.token,
-        value,
         version: global.version,
       },
       "settings"
@@ -762,14 +696,12 @@ const parseSettingsCommand = (
   );
 };
 
-// --- Main parser ---
-
 /** Parse and validate command-line arguments.
  *
  * @param args - Command-line arguments, excluding the executable and script.
  * @returns The parsed CLI command.
  */
-export const parseArgs = (args: string[]): ParsedArgs => {
+export const parseArgs = (args: string[]) => {
   const { global, remaining } = parseGlobalFlags(args);
   const [subcommand] = remaining;
 

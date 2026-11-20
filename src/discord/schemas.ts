@@ -11,8 +11,6 @@ const snowflakeSchema = z.string().regex(SNOWFLAKE_REGEX, {
 
 const snowflakeArraySchema = z.array(snowflakeSchema);
 
-// Embed sub-objects
-
 export const EmbedFooterSchema = z.object({
   icon_url: z.string().optional(),
   proxy_icon_url: z.string().optional(),
@@ -205,7 +203,6 @@ export const SearchParamsSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
-// Inferred types
 /** Inferred Discord embed payload. */
 export type Embed = z.infer<typeof EmbedSchema>;
 

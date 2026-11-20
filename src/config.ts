@@ -1,7 +1,6 @@
 import { chmod, readFile, writeFile } from "node:fs/promises";
 
 import { Err, Ok } from "better-result";
-import type { Result } from "better-result";
 import { z } from "zod";
 
 import { ConfigError, ExportError } from "@/errors.ts";
@@ -23,7 +22,7 @@ export interface Config {
 /** Settings persisted by the CLI. */
 export type SettingsJson = z.infer<typeof SettingsSchema>;
 
-const readSettingsFile = async (): Promise<SettingsJson> => {
+const readSettingsFile = async () => {
   let text: string;
 
   try {
@@ -39,22 +38,18 @@ const readSettingsFile = async (): Promise<SettingsJson> => {
   try {
     const parsed: unknown = z.unknown().parse(JSON.parse(text));
 
-    // Validate with Zod
     const result = SettingsSchema.safeParse(parsed);
 
     if (!result.success) {
-      // Invalid format but recoverable - return empty
       return {};
     }
 
     return result.data;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      // Invalid JSON but recoverable
       return {};
     }
 
-    // Re-throw I/O errors for caller to handle
     throw error;
   }
 };
@@ -64,7 +59,7 @@ const readSettingsFile = async (): Promise<SettingsJson> => {
  *
  * @returns The resolved config, or a typed configuration error.
  */
-export const loadConfig = async (): Promise<Result<Config, ConfigError>> => {
+export const loadConfig = async () => {
   let settings: SettingsJson;
 
   try {
@@ -101,11 +96,8 @@ export const loadConfig = async (): Promise<Result<Config, ConfigError>> => {
  * @param values - The settings to persist.
  * @returns Success or a typed persistence error.
  */
-export const saveSettings = async (
-  values: SettingsJson
-): Promise<Result<void, ExportError>> => {
+export const saveSettings = async (values: SettingsJson) => {
   try {
-    // Validate input before processing
     const validationResult = SettingsSchema.safeParse(values);
 
     if (!validationResult.success) {
@@ -127,17 +119,16 @@ export const saveSettings = async (
       mode: 0o600,
     });
 
-    // Secure file permissions (owner-only)
     try {
       await chmod(SETTINGS_FILE, 0o600);
     } catch (error) {
       if (
-        error instanceof Error &&
-        "code" in error &&
-        (error.code === "ENOTSUP" || error.code === "EINVAL")
+        !(
+          error instanceof Error &&
+          "code" in error &&
+          (error.code === "ENOTSUP" || error.code === "EINVAL")
+        )
       ) {
-        // Ignore known unsupported cases (e.g., Windows)
-      } else {
         return new Err(
           new ExportError({
             cause: error,
@@ -173,5 +164,5 @@ const BOT_PERMISSIONS = Object.values(BOT_PERMISSION_FLAGS).reduce(
  * @param clientId - Discord application client ID.
  * @returns The bot authorization URL.
  */
-export const generateInviteLink = (clientId: string): string =>
+export const generateInviteLink = (clientId: string) =>
   `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&scope=bot&permissions=${BOT_PERMISSIONS}`;

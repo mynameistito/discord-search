@@ -2,7 +2,7 @@
 import { readFile } from "node:fs/promises";
 
 import { intro, log, outro, select } from "@clack/prompts";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 
 import { exitWithError, HELP_TEXT, SUBCOMMAND_HELP } from "@/cli/args-help.ts";
 import { parseArgs } from "@/cli/args-parse.ts";
@@ -18,8 +18,10 @@ import type {
   SettingsShowArgs,
 } from "@/cli/args-types.ts";
 import { handleCancel } from "@/cli/prompts.ts";
+import { disposeRuntime, runOperation } from "@/cli/runtime.ts";
 import { loadConfig as loadConfigFn } from "@/config.ts";
-import type { loadConfig } from "@/config.ts";
+import type { Config } from "@/config.ts";
+import type { ConfigError } from "@/errors.ts";
 import {
   deletePresetNonInteractive,
   handleManagePresets,
@@ -46,9 +48,9 @@ import { ensureAppDir } from "@/paths.ts";
 import { savePreset } from "@/presets.ts";
 import type { AppState } from "@/types.ts";
 
-type ConfigResult = Awaited<ReturnType<typeof loadConfig>>;
+type ConfigResult = Result.Result<Config, ConfigError>;
 
-const MenuActionSchema = z.enum([
+const MenuActionSchema = Schema.Literals([
   "search",
   "preset",
   "run-all",
@@ -57,7 +59,7 @@ const MenuActionSchema = z.enum([
   "exit",
 ]);
 
-const PackageVersionSchema = z.object({ version: z.string() });
+const PackageVersionSchema = Schema.Struct({ version: Schema.String });
 
 const handleMenuAction = async (action: string, state: AppState) => {
   if (action === "exit") {
@@ -111,16 +113,20 @@ const runInteractive = async (cliArgs: ParsedArgs) => {
   intro("Discord Search");
 
   await ensureAppDir();
-  const configResult = await loadConfigFn();
+  const configResult = await runOperation(loadConfigFn());
   const token = await resolveToken(cliArgs.token, configResult);
 
   const state: AppState = {
     clientId:
       cliArgs.clientId ??
-      (configResult.isOk() ? configResult.value.clientId : undefined),
+      (Result.isSuccess(configResult)
+        ? configResult.success.clientId
+        : undefined),
     defaultGuildId:
       cliArgs.guild ??
-      (configResult.isOk() ? configResult.value.defaultGuildId : undefined),
+      (Result.isSuccess(configResult)
+        ? configResult.success.defaultGuildId
+        : undefined),
     token,
   };
 
@@ -140,7 +146,7 @@ const runInteractive = async (cliArgs: ParsedArgs) => {
     handleCancel(action);
 
     const shouldContinue = await handleMenuAction(
-      MenuActionSchema.parse(action),
+      Schema.decodeUnknownSync(MenuActionSchema)(action),
       state
     );
 
@@ -166,24 +172,26 @@ const handleSearchCommand = async (
 
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
 
-  if (tokenResult.isErr()) {
-    exitWithError(tokenResult.error.message, "search");
+  if (Result.isFailure(tokenResult)) {
+    exitWithError(tokenResult.failure.message, "search");
 
     return;
   }
 
-  await executeNonInteractiveSearch(cliArgs.params, tokenResult.value, {
+  await executeNonInteractiveSearch(cliArgs.params, tokenResult.success, {
     export: cliArgs.export,
     json: cliArgs.json,
     outputDir: cliArgs.outputDir,
   });
 
   if (cliArgs.savePreset !== undefined) {
-    const saveResult = await savePreset(cliArgs.savePreset, cliArgs.params);
+    const saveResult = await runOperation(
+      savePreset(cliArgs.savePreset, cliArgs.params)
+    );
 
-    if (saveResult.isErr()) {
+    if (Result.isFailure(saveResult)) {
       exitWithError(
-        `Failed to save preset "${cliArgs.savePreset}": ${saveResult.error.message}`,
+        `Failed to save preset "${cliArgs.savePreset}": ${saveResult.failure.message}`,
         "preset"
       );
 
@@ -200,13 +208,13 @@ const handlePresetRunCommand = async (
 ) => {
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
 
-  if (tokenResult.isErr()) {
-    exitWithError(tokenResult.error.message, "preset");
+  if (Result.isFailure(tokenResult)) {
+    exitWithError(tokenResult.failure.message, "preset");
 
     return;
   }
 
-  await runPresetNonInteractive(cliArgs.name, tokenResult.value, {
+  await runPresetNonInteractive(cliArgs.name, tokenResult.success, {
     export: cliArgs.export,
     json: cliArgs.json,
     outputDir: cliArgs.outputDir,
@@ -219,8 +227,8 @@ const handlePresetRunAllCommand = async (
 ) => {
   const tokenResult = resolveTokenNonInteractive(cliArgs.token, configResult);
 
-  if (tokenResult.isErr()) {
-    exitWithError(tokenResult.error.message, "preset");
+  if (Result.isFailure(tokenResult)) {
+    exitWithError(tokenResult.failure.message, "preset");
 
     return;
   }
@@ -228,7 +236,7 @@ const handlePresetRunAllCommand = async (
   await runAllPresetsNonInteractive(
     cliArgs.names,
     cliArgs.all,
-    tokenResult.value,
+    tokenResult.success,
     {
       export: cliArgs.export,
       outputDir: cliArgs.outputDir,
@@ -248,11 +256,13 @@ const buildStateFromConfig = (
   configResult: ConfigResult,
   cliToken?: string
 ) => ({
-  clientId: configResult.isOk() ? configResult.value.clientId : undefined,
-  defaultGuildId: configResult.isOk()
-    ? configResult.value.defaultGuildId
+  clientId: Result.isSuccess(configResult)
+    ? configResult.success.clientId
     : undefined,
-  token: configResult.isOk() ? configResult.value.token : cliToken,
+  defaultGuildId: Result.isSuccess(configResult)
+    ? configResult.success.defaultGuildId
+    : undefined,
+  token: Result.isSuccess(configResult) ? configResult.success.token : cliToken,
 });
 
 const handleSettingsShowCommand = (
@@ -276,7 +286,9 @@ const handleSettingsInviteCommand = (
 ) => {
   const clientId =
     cliArgs.clientId ??
-    (configResult.isOk() ? configResult.value.clientId : undefined);
+    (Result.isSuccess(configResult)
+      ? configResult.success.clientId
+      : undefined);
 
   showInviteLinkNonInteractive(clientId);
 };
@@ -321,7 +333,7 @@ const handleSettingsCommand = async (
 
 const runNonInteractive = async (cliArgs: ParsedArgs) => {
   await ensureAppDir();
-  const configResult = await loadConfigFn();
+  const configResult = await runOperation(loadConfigFn());
 
   if (cliArgs.command === "search") {
     await handleSearchCommand(cliArgs, configResult);
@@ -352,10 +364,10 @@ const main = async () => {
       await readFile(new URL("../package.json", import.meta.url), "utf-8")
     );
 
-    const parsedPackage = PackageVersionSchema.safeParse(pkg);
+    const parsedPackage = Schema.decodeUnknownResult(PackageVersionSchema)(pkg);
 
-    const version = parsedPackage.success
-      ? parsedPackage.data.version
+    const version = Result.isSuccess(parsedPackage)
+      ? parsedPackage.success.version
       : "unknown";
 
     console.log(`discord-search ${version}`);
@@ -374,7 +386,9 @@ const run = async () => {
     console.error(
       error instanceof Error ? (error.stack ?? error.message) : String(error)
     );
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    await disposeRuntime();
   }
 };
 

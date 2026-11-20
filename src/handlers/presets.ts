@@ -8,9 +8,7 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
-import type { Result } from "better-result";
-import { matchError } from "better-result";
-import { z } from "zod";
+import { Result, Schema, Match } from "effect";
 
 import {
   handleCancel,
@@ -18,6 +16,7 @@ import {
   parseTextPrompt,
   promptForSearchParams,
 } from "@/cli/prompts.ts";
+import { runOperation, runSearch } from "@/cli/runtime.ts";
 import { collateResults } from "@/collate.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 import { searchAllMessages } from "@/discord/search.ts";
@@ -97,15 +96,15 @@ const sanitizePresetDirName = (name: string) => {
  * @returns When the user returns to the previous menu.
  */
 export const handleManagePresets = async () => {
-  const presetsResult = await loadPresets();
+  const presetsResult = await runOperation(loadPresets());
 
-  if (presetsResult.isErr()) {
-    log.error(`Failed to load presets: ${presetsResult.error.message}`);
+  if (Result.isFailure(presetsResult)) {
+    log.error(`Failed to load presets: ${presetsResult.failure.message}`);
 
     return;
   }
 
-  if (presetsResult.value.length === 0) {
+  if (presetsResult.success.length === 0) {
     log.info("No presets saved yet.");
 
     return;
@@ -114,7 +113,7 @@ export const handleManagePresets = async () => {
   const presetAction = await select({
     message: "Select a preset to delete:",
     options: [
-      ...presetsResult.value.map((p) => ({
+      ...presetsResult.success.map((p) => ({
         label: `${p.name} (guild: ${p.params.guildId})`,
         value: p.name,
       })),
@@ -126,10 +125,10 @@ export const handleManagePresets = async () => {
 
   if (presetAction !== "__back__") {
     const name = parseTextPrompt(presetAction);
-    const result = await deletePreset(name);
+    const result = await runOperation(deletePreset(name));
 
-    if (result.isErr()) {
-      log.error(`Failed to delete preset: ${result.error.message}`);
+    if (Result.isFailure(result)) {
+      log.error(`Failed to delete preset: ${result.failure.message}`);
 
       return;
     }
@@ -150,15 +149,15 @@ export const resolveSearchParams = async (
   defaultGuildId?: string
 ) => {
   if (action === "preset") {
-    const presetsResult = await loadPresets();
+    const presetsResult = await runOperation(loadPresets());
 
-    if (presetsResult.isErr()) {
-      log.error(`Failed to load presets: ${presetsResult.error.message}`);
+    if (Result.isFailure(presetsResult)) {
+      log.error(`Failed to load presets: ${presetsResult.failure.message}`);
 
       return null;
     }
 
-    if (presetsResult.value.length === 0) {
+    if (presetsResult.success.length === 0) {
       log.info("No presets saved yet. Starting new search.");
 
       return await promptForSearchParams(defaultGuildId);
@@ -166,7 +165,7 @@ export const resolveSearchParams = async (
 
     const presetName = await select({
       message: "Select a preset:",
-      options: presetsResult.value.map((p) => ({
+      options: presetsResult.success.map((p) => ({
         label: `${p.name} (guild: ${p.params.guildId})`,
         value: p.name,
       })),
@@ -174,7 +173,7 @@ export const resolveSearchParams = async (
 
     handleCancel(presetName);
 
-    const preset = presetsResult.value.find((p) => p.name === presetName);
+    const preset = presetsResult.success.find((p) => p.name === presetName);
 
     if (!preset) {
       log.error("Preset not found.");
@@ -208,10 +207,10 @@ export const resolveSearchParams = async (
     );
 
     const savedName = presetName.trim();
-    const result = await savePreset(savedName, params);
+    const result = await runOperation(savePreset(savedName, params));
 
-    if (result.isErr()) {
-      log.error(`Failed to save preset: ${result.error.message}`);
+    if (Result.isFailure(result)) {
+      log.error(`Failed to save preset: ${result.failure.message}`);
     } else {
       log.success(`Saved preset: ${savedName}`);
     }
@@ -230,15 +229,17 @@ const runPresetSearch = async (
   const s = spinner();
   s.start(`Searching: ${name}...`);
 
-  const result = await searchAllMessages(params, token, (progress) => {
-    s.message(
-      `[${name}] Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
-    );
-  });
+  const result = await runSearch(
+    searchAllMessages(params, token, (progress) => {
+      s.message(
+        `[${name}] Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
+      );
+    })
+  );
 
-  if (result.isErr()) {
+  if (Result.isFailure(result)) {
     s.stop(`Search failed for: ${name}`);
-    matchError(result.error, {
+    Match.valueTags(result.failure, {
       DiscordApiError: logApiError,
       IndexNotReadyError: logIndexError,
       RateLimitExhaustedError: logRateLimitError,
@@ -248,13 +249,13 @@ const runPresetSearch = async (
     return;
   }
 
-  s.stop(`[${name}] Found ${result.value.length.toLocaleString()} messages.`);
+  s.stop(`[${name}] Found ${result.success.length.toLocaleString()} messages.`);
 
-  if (result.value.length === 0) {
+  if (result.success.length === 0) {
     return;
   }
 
-  const collated = collateResults(result.value);
+  const collated = collateResults(result.success);
   displaySummary(collated);
 
   if (format === "none") {
@@ -264,25 +265,25 @@ const runPresetSearch = async (
   const dir = `${OUTPUT_DIR}/${sanitizePresetDirName(name)}-${timestamp}`;
   await mkdir(dir, { recursive: true });
 
-  const exports: Promise<Result<void, ExportError>>[] = [];
+  const exports: Promise<Result.Result<void, ExportError>>[] = [];
 
   if (format === "json" || format === "all") {
-    exports.push(exportJson(collated, `${dir}/data.json`));
+    exports.push(runOperation(exportJson(collated, `${dir}/data.json`)));
   }
 
   if (format === "all") {
     exports.push(
-      exportMessagesCsv(collated, `${dir}/messages.csv`),
-      exportEmbedsCsv(collated, `${dir}/embeds.csv`),
-      exportFieldsCsv(collated, `${dir}/fields.csv`)
+      runOperation(exportMessagesCsv(collated, `${dir}/messages.csv`)),
+      runOperation(exportEmbedsCsv(collated, `${dir}/embeds.csv`)),
+      runOperation(exportFieldsCsv(collated, `${dir}/fields.csv`))
     );
   }
 
   const results = await Promise.all(exports);
-  const failed = results.find((r) => r.isErr());
+  const failed = results.find((r) => Result.isFailure(r));
 
   if (failed) {
-    log.error(`Export failed for ${name}: ${failed.error.message}`);
+    log.error(`Export failed for ${name}: ${failed.failure.message}`);
 
     return;
   }
@@ -296,21 +297,21 @@ const runPresetSearch = async (
  * @returns A promise that resolves when preset processing is complete.
  */
 export const handleRunAllPresets = async (token: string) => {
-  const presetsResult = await loadPresets();
+  const presetsResult = await runOperation(loadPresets());
 
-  if (presetsResult.isErr()) {
-    log.error(`Failed to load presets: ${presetsResult.error.message}`);
+  if (Result.isFailure(presetsResult)) {
+    log.error(`Failed to load presets: ${presetsResult.failure.message}`);
 
     return;
   }
 
-  if (presetsResult.value.length === 0) {
+  if (presetsResult.success.length === 0) {
     log.info("No presets saved yet.");
 
     return;
   }
 
-  const allPresets = presetsResult.value;
+  const allPresets = presetsResult.success;
 
   const selected = await multiselect({
     message: "Select presets to run:",
@@ -323,7 +324,10 @@ export const handleRunAllPresets = async (token: string) => {
 
   handleCancel(selected);
 
-  const selectedNames = new Set(z.array(z.string()).parse(selected));
+  const selectedNames = new Set(
+    Schema.decodeUnknownSync(Schema.Array(Schema.String))(selected)
+  );
+
   const presets = allPresets.filter((p) => selectedNames.has(p.name));
 
   log.info(`Running ${presets.length} preset(s) sequentially...`);
@@ -341,7 +345,9 @@ export const handleRunAllPresets = async (token: string) => {
 
   const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
 
-  const exportFormat = z.enum(["json", "all", "none"]).parse(format);
+  const exportFormat = Schema.decodeUnknownSync(
+    Schema.Literals(["json", "all", "none"])
+  )(format);
 
   const runPresetAt = async (index: number) => {
     const preset = presets[index];
@@ -368,17 +374,17 @@ export const handleRunAllPresets = async (token: string) => {
 };
 
 const loadPresetsOrExit = async () => {
-  const result = await loadPresets();
+  const result = await runOperation(loadPresets());
 
-  if (result.isErr()) {
+  if (Result.isFailure(result)) {
     process.stderr.write("Failed to load presets.\n");
     process.exit(1);
   }
 
-  return result.value;
+  return result.success;
 };
 
-const findPresetOrExit = (presets: Preset[], name: string) => {
+const findPresetOrExit = (presets: readonly Preset[], name: string) => {
   const preset = presets.find((p) => p.name === name);
 
   if (!preset) {
@@ -489,7 +495,7 @@ const reportValidationError = (error: { message: string }) => {
  * @returns A promise that resolves when all presets have completed.
  */
 export const runAllPresetsNonInteractive = async (
-  names: string[],
+  names: readonly string[],
   all: boolean,
   token: string,
   options: { export?: string; outputDir?: string }
@@ -525,16 +531,18 @@ export const runAllPresetsNonInteractive = async (
       `[${index + 1}/${presets.length}] Running preset: ${preset.name}\n`
     );
 
-    const result = await searchAllMessages(preset.params, token, (progress) => {
-      process.stderr.write(
-        `\r  Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
-      );
-    });
+    const result = await runSearch(
+      searchAllMessages(preset.params, token, (progress) => {
+        process.stderr.write(
+          `\r  Fetching... (${progress.fetched.toLocaleString()} / ${progress.total.toLocaleString()})`
+        );
+      })
+    );
 
     process.stderr.write("\n");
 
-    if (result.isErr()) {
-      matchError(result.error, {
+    if (Result.isFailure(result)) {
+      Match.valueTags(result.failure, {
         DiscordApiError: reportApiError,
         IndexNotReadyError: reportIndexError,
         RateLimitExhaustedError: reportRateLimitError,
@@ -542,12 +550,12 @@ export const runAllPresetsNonInteractive = async (
       });
     } else {
       process.stderr.write(
-        `  Found ${result.value.length.toLocaleString()} messages.\n`
+        `  Found ${result.success.length.toLocaleString()} messages.\n`
       );
 
-      if (result.value.length > 0 && options.export !== undefined) {
+      if (result.success.length > 0 && options.export !== undefined) {
         await tryExportPreset(
-          collateResults(result.value),
+          collateResults(result.success),
           preset,
           { export: options.export, outputDir: options.outputDir },
           timestamp
@@ -578,9 +586,9 @@ export const savePresetNonInteractive = async (
     process.exit(1);
   }
 
-  const result = await savePreset(name, params);
+  const result = await runOperation(savePreset(name, params));
 
-  if (result.isErr()) {
+  if (Result.isFailure(result)) {
     process.stderr.write(`Failed to save preset: ${name}\n`);
     process.exit(1);
   }
@@ -594,9 +602,9 @@ export const savePresetNonInteractive = async (
  * @returns A promise that resolves after deletion.
  */
 export const deletePresetNonInteractive = async (name: string) => {
-  const result = await deletePreset(name);
+  const result = await runOperation(deletePreset(name));
 
-  if (result.isErr()) {
+  if (Result.isFailure(result)) {
     process.stderr.write(`Failed to delete preset: ${name}\n`);
     process.exit(1);
   }

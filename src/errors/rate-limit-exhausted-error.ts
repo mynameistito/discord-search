@@ -1,11 +1,12 @@
-import { TaggedError } from "better-result";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error returned when Discord rate-limit retries are exhausted. */
-export class RateLimitExhaustedError extends defineTaggedError(
-  "RateLimitExhaustedError"
-)<{
-  message: string;
-  retryAfter: number;
-}> {}
+export class RateLimitExhaustedError extends taggedError<RateLimitExhaustedError>()(
+  "RateLimitExhaustedError",
+  {
+    message: Schema.String,
+    retryAfter: Schema.Number,
+  }
+) {}

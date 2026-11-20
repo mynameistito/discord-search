@@ -1,9 +1,9 @@
-import { TaggedError } from "better-result";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error returned when reading or writing a search preset fails. */
-export class PresetError extends defineTaggedError("PresetError")<{
-  cause: unknown;
-  message: string;
-}> {}
+export class PresetError extends taggedError<PresetError>()("PresetError", {
+  cause: Schema.Unknown,
+  message: Schema.String,
+}) {}

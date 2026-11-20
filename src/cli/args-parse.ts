@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { Result, Schema } from "effect";
 
 import { exitWithError } from "@/cli/args-help.ts";
 import { ParsedArgsSchema } from "@/cli/args-types.ts";
@@ -16,11 +16,10 @@ import { SNOWFLAKE_REGEX } from "@/discord/schemas.ts";
 import type { SearchParams } from "@/discord/schemas.ts";
 
 const parseWithError = <T extends ParsedArgs>(data: T, subcommand: string) => {
-  const result = ParsedArgsSchema.safeParse(data);
+  const result = Schema.decodeUnknownResult(ParsedArgsSchema)(data);
 
-  if (!result.success) {
-    const messages = result.error.issues.map((i) => i.message);
-    exitWithError(messages.join("; "), subcommand);
+  if (Result.isFailure(result)) {
+    exitWithError(result.failure.message, subcommand);
   }
 
   return data;
@@ -639,17 +638,17 @@ const parseSettingsCommand = (
       );
     }
 
-    const settingsKeySchema = z.enum(["token", "client-id", "guild"]);
-    const parsedKey = settingsKeySchema.safeParse(key);
+    const settingsKeySchema = Schema.Literals(["token", "client-id", "guild"]);
+    const parsedKey = Schema.decodeUnknownResult(settingsKeySchema)(key);
 
-    if (!parsedKey.success) {
+    if (Result.isFailure(parsedKey)) {
       return exitWithError(
         `Unknown settings key: "${key}". Valid keys: token, client-id, guild`,
         "settings"
       );
     }
 
-    const settingKey = parsedKey.data;
+    const settingKey = parsedKey.success;
 
     if (
       (settingKey === "guild" || settingKey === "client-id") &&

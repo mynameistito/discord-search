@@ -4,7 +4,7 @@
 
 ## OVERVIEW
 
-TypeScript CLI tool for Discord message search with filtering, presets, and export. Built with Bun runtime, Zod validation, better-result error handling, and @clack/prompts for interactive UI.
+TypeScript CLI tool for Discord message search with filtering, presets, and export. Built with Bun runtime, Effect workflows and schema validation, and @clack/prompts for interactive UI.
 
 ## STRUCTURE
 
@@ -12,12 +12,12 @@ TypeScript CLI tool for Discord message search with filtering, presets, and expo
 src/
 ├── cli/           # CLI UI (args, prompts, browser, keys, ansi)
 ├── handlers/        # Business logic (search, presets, settings, export)
-├── discord/         # API client, search, Zod schemas
+├── discord/         # API client, search, Effect schemas
 ├── index.ts         # Entry point with menu loop
 ├── types.ts         # AppState type
 ├── config.ts        # Settings loader
 ├── paths.ts         # File path utilities
-├── errors.ts        # Tagged errors (better-result)
+├── errors.ts        # Schema tagged errors
 ├── collate.ts       # Data aggregation
 ├── export.ts        # JSON/CSV export
 └── presets.ts       # Preset persistence
@@ -25,19 +25,19 @@ src/
 
 ## WHERE TO LOOK
 
-| Task            | Location               | Notes                   |
-| --------------- | ---------------------- | ----------------------- |
-| CLI flow        | src/index.ts           | Main menu loop          |
-| Search logic    | src/handlers/search.ts | Execution orchestration |
-| API integration | src/discord/client.ts  | Rate limiting, retries  |
-| Schemas         | src/discord/schemas.ts | Zod validation          |
-| Error handling  | src/errors.ts          | Tagged union            |
+| Task            | Location               | Notes                    |
+| --------------- | ---------------------- | ------------------------ |
+| CLI flow        | src/index.ts           | Main menu loop           |
+| Search logic    | src/handlers/search.ts | Execution orchestration  |
+| API integration | src/discord/client.ts  | Rate limiting, retries   |
+| Schemas         | src/discord/schemas.ts | Effect Schema validation |
+| Error handling  | src/errors.ts          | Tagged union             |
 
 ## CONVENTIONS
 
-- Railway-oriented programming with better-result
+- Compose application workflows with Effect and render typed failures at the CLI boundary
 - Tagged errors for discriminated unions
-- Schema-first with Zod for API contracts
+- Decode external payloads with Effect Schema
 - Use `type` keyword over `interface`
 
 ## ANTI-PATTERNS

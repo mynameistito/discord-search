@@ -1,9 +1,9 @@
-import { TaggedError } from "better-result";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error returned when exporting data fails. */
-export class ExportError extends defineTaggedError("ExportError")<{
-  cause: unknown;
-  message: string;
-}> {}
+export class ExportError extends taggedError<ExportError>()("ExportError", {
+  cause: Schema.Unknown,
+  message: Schema.String,
+}) {}

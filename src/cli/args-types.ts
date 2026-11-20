@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { Schema } from "effect";
 
 import { SearchParamsSchema } from "@/discord/schemas.ts";
 
@@ -10,87 +10,100 @@ const EXPORT_FORMATS = [
   "all",
 ] as const;
 
-export const GlobalFlagsSchema = z.object({
-  help: z.boolean(),
-  token: z.string().optional(),
-  version: z.boolean(),
+export const GlobalFlagsSchema = Schema.Struct({
+  help: Schema.Boolean.pipe(Schema.mutableKey),
+  token: Schema.String.pipe(Schema.optional, Schema.mutableKey),
+  version: Schema.Boolean.pipe(Schema.mutableKey),
 });
 
-export const InteractiveArgsSchema = GlobalFlagsSchema.extend({
-  clientId: z.string().optional(),
-  command: z.literal("interactive"),
-  guild: z.string().optional(),
+export const InteractiveArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  clientId: Schema.String.pipe(Schema.optional),
+  command: Schema.Literal("interactive"),
+  guild: Schema.String.pipe(Schema.optional),
 });
 
-export const HelpArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("help"),
-  targetCommand: z.enum(["search", "preset", "settings"]).optional(),
+export const HelpArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  command: Schema.Literal("help"),
+  targetCommand: Schema.Literals(["search", "preset", "settings"]).pipe(
+    Schema.optional
+  ),
 });
 
-export const SearchArgsSchema = GlobalFlagsSchema.extend({
-  command: z.literal("search"),
-  export: z.enum(EXPORT_FORMATS).optional(),
-  json: z.boolean(),
-  outputDir: z.string().optional(),
+export const SearchArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  command: Schema.Literal("search"),
+  export: Schema.Literals(EXPORT_FORMATS).pipe(Schema.optional),
+  json: Schema.Boolean,
+  outputDir: Schema.String.pipe(Schema.optional),
   params: SearchParamsSchema,
-  savePreset: z.string().optional(),
+  savePreset: Schema.String.pipe(Schema.optional),
 });
 
-export const PresetListArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("list"),
-  command: z.literal("preset"),
+export const PresetListArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("list"),
+  command: Schema.Literal("preset"),
 });
 
-export const PresetRunArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("run"),
-  command: z.literal("preset"),
-  export: z.enum(EXPORT_FORMATS).optional(),
-  json: z.boolean(),
-  name: z.string(),
-  outputDir: z.string().optional(),
+export const PresetRunArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("run"),
+  command: Schema.Literal("preset"),
+  export: Schema.Literals(EXPORT_FORMATS).pipe(Schema.optional),
+  json: Schema.Boolean,
+  name: Schema.String,
+  outputDir: Schema.String.pipe(Schema.optional),
 });
 
-export const PresetRunAllArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("run-all"),
-  all: z.boolean(),
-  command: z.literal("preset"),
-  export: z.enum(EXPORT_FORMATS).optional(),
-  names: z.array(z.string()),
-  outputDir: z.string().optional(),
+export const PresetRunAllArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("run-all"),
+  all: Schema.Boolean,
+  command: Schema.Literal("preset"),
+  export: Schema.Literals(EXPORT_FORMATS).pipe(Schema.optional),
+  names: Schema.Array(Schema.String),
+  outputDir: Schema.String.pipe(Schema.optional),
 });
 
-export const PresetSaveArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("save"),
-  command: z.literal("preset"),
-  name: z.string(),
+export const PresetSaveArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("save"),
+  command: Schema.Literal("preset"),
+  name: Schema.String,
   params: SearchParamsSchema,
 });
 
-export const PresetDeleteArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("delete"),
-  command: z.literal("preset"),
-  name: z.string(),
+export const PresetDeleteArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("delete"),
+  command: Schema.Literal("preset"),
+  name: Schema.String,
 });
 
-export const SettingsShowArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("show"),
-  command: z.literal("settings"),
+export const SettingsShowArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("show"),
+  command: Schema.Literal("settings"),
 });
 
-export const SettingsSetArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("set"),
-  command: z.literal("settings"),
-  key: z.enum(["token", "client-id", "guild"]),
-  value: z.string(),
+export const SettingsSetArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("set"),
+  command: Schema.Literal("settings"),
+  key: Schema.Literals(["token", "client-id", "guild"]),
+  value: Schema.String,
 });
 
-export const SettingsInviteArgsSchema = GlobalFlagsSchema.extend({
-  action: z.literal("invite"),
-  clientId: z.string().optional(),
-  command: z.literal("settings"),
+export const SettingsInviteArgsSchema = Schema.Struct({
+  ...GlobalFlagsSchema.fields,
+  action: Schema.Literal("invite"),
+  clientId: Schema.String.pipe(Schema.optional),
+  command: Schema.Literal("settings"),
 });
 
-export const PresetArgsSchema = z.discriminatedUnion("action", [
+export const PresetArgsSchema = Schema.Union([
   PresetListArgsSchema,
   PresetRunArgsSchema,
   PresetRunAllArgsSchema,
@@ -98,13 +111,13 @@ export const PresetArgsSchema = z.discriminatedUnion("action", [
   PresetDeleteArgsSchema,
 ]);
 
-export const SettingsArgsSchema = z.discriminatedUnion("action", [
+export const SettingsArgsSchema = Schema.Union([
   SettingsShowArgsSchema,
   SettingsSetArgsSchema,
   SettingsInviteArgsSchema,
 ]);
 
-export const ParsedArgsSchema = z.union([
+export const ParsedArgsSchema = Schema.Union([
   InteractiveArgsSchema,
   HelpArgsSchema,
   SearchArgsSchema,
@@ -113,40 +126,40 @@ export const ParsedArgsSchema = z.union([
 ]);
 
 /** Global options accepted by CLI commands. */
-export type GlobalFlags = z.infer<typeof GlobalFlagsSchema>;
+export type GlobalFlags = typeof GlobalFlagsSchema.Type;
 
 /** Arguments for launching the interactive interface. */
-export type InteractiveArgs = z.infer<typeof InteractiveArgsSchema>;
+export type InteractiveArgs = typeof InteractiveArgsSchema.Type;
 
 /** Arguments for displaying general or subcommand help. */
-export type HelpArgs = z.infer<typeof HelpArgsSchema>;
+export type HelpArgs = typeof HelpArgsSchema.Type;
 
 /** Arguments for a message search command. */
-export type SearchArgs = z.infer<typeof SearchArgsSchema>;
+export type SearchArgs = typeof SearchArgsSchema.Type;
 
 /** Arguments for listing saved presets. */
-export type PresetListArgs = z.infer<typeof PresetListArgsSchema>;
+export type PresetListArgs = typeof PresetListArgsSchema.Type;
 
 /** Arguments for running one saved preset. */
-export type PresetRunArgs = z.infer<typeof PresetRunArgsSchema>;
+export type PresetRunArgs = typeof PresetRunArgsSchema.Type;
 
 /** Arguments for running multiple saved presets. */
-export type PresetRunAllArgs = z.infer<typeof PresetRunAllArgsSchema>;
+export type PresetRunAllArgs = typeof PresetRunAllArgsSchema.Type;
 
 /** Arguments for saving a new preset. */
-export type PresetSaveArgs = z.infer<typeof PresetSaveArgsSchema>;
+export type PresetSaveArgs = typeof PresetSaveArgsSchema.Type;
 
 /** Arguments for deleting a saved preset. */
-export type PresetDeleteArgs = z.infer<typeof PresetDeleteArgsSchema>;
+export type PresetDeleteArgs = typeof PresetDeleteArgsSchema.Type;
 
 /** Arguments for displaying settings. */
-export type SettingsShowArgs = z.infer<typeof SettingsShowArgsSchema>;
+export type SettingsShowArgs = typeof SettingsShowArgsSchema.Type;
 
 /** Arguments for updating a setting. */
-export type SettingsSetArgs = z.infer<typeof SettingsSetArgsSchema>;
+export type SettingsSetArgs = typeof SettingsSetArgsSchema.Type;
 
 /** Arguments for generating a bot invite URL. */
-export type SettingsInviteArgs = z.infer<typeof SettingsInviteArgsSchema>;
+export type SettingsInviteArgs = typeof SettingsInviteArgsSchema.Type;
 
 /** Any valid parsed CLI command. */
-export type ParsedArgs = z.infer<typeof ParsedArgsSchema>;
+export type ParsedArgs = typeof ParsedArgsSchema.Type;

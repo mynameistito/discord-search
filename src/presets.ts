@@ -1,21 +1,21 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-import { Result } from "better-result";
-import { z } from "zod";
+import { Effect, Schema } from "effect";
 
 import { SearchParamsSchema } from "@/discord/schemas.ts";
+import type { SearchParams } from "@/discord/schemas.ts";
 import { PresetError } from "@/errors.ts";
 import { getPresetsFile } from "@/paths.ts";
 
-const PresetSchema = z.object({
-  name: z.string(),
+const PresetSchema = Schema.Struct({
+  name: Schema.String,
   params: SearchParamsSchema,
 });
 
-const PresetsArraySchema = z.array(PresetSchema);
+const PresetsText = Schema.fromJsonString(Schema.Array(PresetSchema));
 
 /** A named set of validated Discord search parameters. */
-export type Preset = z.infer<typeof PresetSchema>;
+export type Preset = typeof PresetSchema.Type;
 
 const consumeStringChars = (text: string, start: number, out: string[]) => {
   let i = start;
@@ -62,7 +62,7 @@ const skipComment = (text: string, start: number) => {
   return i + 2;
 };
 
-const parseJsonc = (text: string) => {
+const stripJsoncComments = (text: string) => {
   const out: string[] = [];
   let i = 0;
 
@@ -83,111 +83,84 @@ const parseJsonc = (text: string) => {
     }
   }
 
-  return PresetsArraySchema.parse(JSON.parse(out.join("")));
+  return out.join("");
 };
 
-/**
- * Load and validate presets from the configured JSON or JSONC file.
- *
- * @returns The loaded presets or a persistence error.
- */
-export const loadPresets = async () =>
-  await Result.tryPromise({
-    catch: (cause) =>
-      new PresetError({
-        cause,
-        message: `Failed to load presets: ${cause instanceof Error ? cause.message : String(cause)}`,
-      }),
+const readPresets = Effect.fn("Presets.readFile")(function* readPresets(
+  path: string
+) {
+  const text = yield* Effect.tryPromise({
+    try: async () => await readFile(path, "utf-8"),
+    catch: (error) => error,
+  }).pipe(
+    Effect.catchIf(
+      (error) =>
+        error instanceof Error && "code" in error && error.code === "ENOENT",
+      () => Effect.succeed("[]")
+    )
+  );
+
+  return yield* Schema.decodeUnknownEffect(PresetsText)(
+    path.endsWith(".jsonc") ? stripJsoncComments(text) : text
+  );
+});
+
+const resolvePath = Effect.tryPromise({
+  try: async () => await getPresetsFile(),
+  catch: (cause) => cause,
+});
+
+const writePresets = (path: string, presets: readonly Preset[]) =>
+  Effect.tryPromise({
     try: async () => {
-      const presetsFile = await getPresetsFile();
-      let text: string;
-
-      try {
-        text = await readFile(presetsFile, "utf-8");
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          "code" in error &&
-          error.code === "ENOENT"
-        ) {
-          return [];
-        }
-
-        throw error;
-      }
-
-      if (presetsFile.endsWith(".jsonc")) {
-        return parseJsonc(text);
-      }
-
-      const parsed: unknown = z.unknown().parse(JSON.parse(text));
-
-      return PresetsArraySchema.parse(parsed);
+      await writeFile(path, JSON.stringify(presets, null, 2));
     },
+    catch: (cause) => cause,
   });
 
-/**
- * Add or replace a saved preset.
- *
- * @param name - Preset name.
- * @param params - Validated search parameters to store.
- * @returns Success or a preset persistence error.
- */
-export const savePreset = async (
+const presetError = (operation: string) =>
+  Effect.mapError(
+    (cause: unknown) =>
+      new PresetError({
+        cause,
+        message: `Failed to ${operation}: ${cause instanceof Error ? cause.message : String(cause)}`,
+      })
+  );
+
+/** Load and validate presets from the configured JSON or JSONC file. */
+export const loadPresets = Effect.fn("Presets.load")(function* loadPresets() {
+  const path = yield* resolvePath;
+
+  return yield* readPresets(path);
+}, presetError("load presets"));
+
+/** Add or replace a saved preset. */
+export const savePreset = Effect.fn("Presets.save")(function* savePreset(
   name: string,
-  params: z.infer<typeof SearchParamsSchema>
-) =>
-  await Result.tryPromise({
-    catch: (cause) =>
-      new PresetError({
-        cause,
-        message: `Failed to save preset: ${cause instanceof Error ? cause.message : String(cause)}`,
-      }),
-    try: async () => {
-      const presetsResult = await loadPresets();
+  params: SearchParams
+) {
+  const path = yield* resolvePath;
+  const current = yield* readPresets(path);
+  const presets = [...current];
+  const index = presets.findIndex((preset) => preset.name === name);
 
-      if (!presetsResult.isOk()) {
-        throw presetsResult.error;
-      }
+  if (index === -1) {
+    presets.push({ name, params });
+  } else {
+    presets[index] = { name, params };
+  }
 
-      const presets = presetsResult.value;
+  yield* writePresets(path, presets);
+}, presetError("save preset"));
 
-      const index = presets.findIndex((p) => p.name === name);
-
-      if (index === -1) {
-        presets.push({ name, params });
-      } else {
-        presets[index] = { name, params };
-      }
-
-      const presetsFile = await getPresetsFile();
-      await writeFile(presetsFile, JSON.stringify(presets, null, 2));
-    },
-  });
-
-/**
- * Delete a saved preset by name.
- *
- * @param name - Name of the preset to delete.
- * @returns Success or a preset persistence error.
- */
-export const deletePreset = async (name: string) =>
-  await Result.tryPromise({
-    catch: (cause) =>
-      new PresetError({
-        cause,
-        message: `Failed to delete preset: ${cause instanceof Error ? cause.message : String(cause)}`,
-      }),
-    try: async () => {
-      const presetsResult = await loadPresets();
-
-      if (!presetsResult.isOk()) {
-        throw presetsResult.error;
-      }
-
-      const presets = presetsResult.value;
-      const filtered = presets.filter((p) => p.name !== name);
-      const presetsFile = await getPresetsFile();
-      await writeFile(presetsFile, JSON.stringify(filtered, null, 2));
-    },
-  });
+/** Delete a saved preset by name. */
+export const deletePreset = Effect.fn("Presets.delete")(function* deletePreset(
+  name: string
+) {
+  const path = yield* resolvePath;
+  const current = yield* readPresets(path);
+  yield* writePresets(
+    path,
+    current.filter((preset) => preset.name !== name)
+  );
+}, presetError("delete preset"));

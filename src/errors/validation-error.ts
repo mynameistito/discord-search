@@ -1,10 +1,11 @@
-import { TaggedError } from "better-result";
-import type { z } from "zod";
+import { Schema } from "effect";
 
-const defineTaggedError = TaggedError;
+const taggedError = Schema.TaggedError;
 
 /** Error returned when a Discord response fails schema validation. */
-export class ValidationError extends defineTaggedError("ValidationError")<{
-  issues: z.core.$ZodIssue[];
-  message: string;
-}> {}
+export class ValidationError extends taggedError<ValidationError>()(
+  "ValidationError",
+  {
+    message: Schema.String,
+  }
+) {}
